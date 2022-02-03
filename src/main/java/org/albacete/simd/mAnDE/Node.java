@@ -9,130 +9,145 @@ import java.util.HashMap;
  */
 public class Node {
 
+    /**
+     * ID of the Node.
+     */
     private String id;
-    private String nombre;
-    private Node padre;
-    private HashMap<String, Node> hijos;
+    
+    /**
+     * Name of the node.
+     */
+    private String name;
+    
+    /**
+     * Name of the parent of the node.
+     */
+    private Node parent;
+    
+    /**
+     * HashMap with the names of the children of the node.
+     */
+    private HashMap<String, Node> children;
 
     /**
-     * Constructor. Crea un nodo padre, pasándole el ID y el nombre.
+     * Constructor. Creates a parent node, passing it the ID and name.
      *
-     * @param id ID del nodo
-     * @param nombre Nombre del nodo
+     * @param id Node ID
+     * @param name Name of the node
      */
-    public Node(String id, String nombre) {
-        this.padre = this;
+    public Node(String id, String name) {
+        this.parent = this;
         this.id = id;
-        this.nombre = nombre;
-        this.hijos = new HashMap();
+        this.name = name;
+        this.children = new HashMap();
     }
 
     /**
-     * Constructor. Crea un nodo hijo, pasándole el ID y el nodo padre.
+     * Constructor. Creates a child node, passing it the ID and parent node.
      *
-     * @param id ID del nodo
-     * @param padre Padre del nodo
+     * @param id Node ID
+     * @param parent Parent of the node
      */
-    public Node(String id, Node padre) {
-        this.padre = padre;
+    public Node(String id, Node parent) {
+        this.parent = parent;
         this.id = id;
-        this.nombre = "";
-        this.hijos = new HashMap();
+        this.name = "";
+        this.children = new HashMap();
     }
 
     /**
-     * Añade un hijo.
+     * Add a child.
      *
-     * @param hijo Hijo a añadir
+     * @param child Child to add
      */
-    protected void addHijo(Node hijo) {
-        this.hijos.put(hijo.getId(), hijo);
+    protected void addChild(Node child) {
+        this.children.put(child.getId(), child);
     }
 
     /**
-     * Devuelve el array de hijos.
+     * Returns the array of children.
      *
-     * @return El array de hijos
+     * @return The array of children
      */
-    protected ArrayList<String> getHijosArray() {
-        ArrayList<String> temp = new ArrayList();
-        hijos.values().forEach((hijo) -> {
-            if (!hijo.nombre.equals("")) {
-                temp.add(hijo.nombre);
+    protected ArrayList<String> getChildrenArray() {
+        ArrayList<String> array = new ArrayList();
+        children.values().forEach((child) -> {
+            if (!child.name.equals("")) {
+                array.add(child.name);
             }
         });
-        return temp;
+        return array;
     }
 
     /**
-     * Devuelve el array de hijos que no sean "no".
+     * Returns the array of children that are not "no".
      *
-     * @param no El hijo que no se debe devolver
-     * @return El array de hijos
+     * @param no The child not to return.
+     * @return The array of children
      */
-    protected ArrayList<String> getHijosArray(String no) {
-        ArrayList<String> temp = new ArrayList();
-        hijos.values().forEach((hijo) -> {
-            if ((!hijo.nombre.equals(no)) && (!hijo.nombre.equals(""))) {
-                temp.add(hijo.nombre);
+    protected ArrayList<String> getChildrenArray(String no) {
+        ArrayList<String> array = new ArrayList();
+        children.values().forEach((child) -> {
+            if ((!child.name.equals(no)) && (!child.name.equals(""))) {
+                array.add(child.name);
             }
         });
-        return temp;
+        return array;
     }
 
     /**
-     * @return the id
+     * @return the ID
      */
     public String getId() {
         return id;
     }
 
     /**
-     * @param id the id to set
+     * @param id the ID to set
      */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * @return the padre
+     * @return the parent
      */
-    public Node getPadre() {
-        return padre;
+    public Node getParent() {
+        return parent;
     }
 
     /**
-     * @param padre the padre to set
+     * @param padre the parent to set
      */
-    public void setPadre(Node padre) {
-        this.padre = padre;
+    public void setParent(Node padre) {
+        this.parent = padre;
     }
 
     /**
-     * @return the hijos
+     * @return the children
      */
-    public HashMap<String, Node> getHijos() {
-        return hijos;
+    public HashMap<String, Node> getChildren() {
+        return children;
     }
 
     /**
-     * @param hijos the hijos to set
+     * @param children the children to set
      */
-    public void setHijos(HashMap<String, Node> hijos) {
-        this.hijos = hijos;
+    public void setChildren(HashMap<String, Node> children) {
+        this.children = children;
     }
 
     /**
-     * @return the nombre
+     * @return the name
      */
-    public String getNombre() {
-        return nombre;
+    public String getName() {
+        return name;
     }
 
     /**
-     * @param nombre the nombre to set
+     * @param name the name to set
      */
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
+    public void setName(String name) {
+        this.name = name;
     }
 }

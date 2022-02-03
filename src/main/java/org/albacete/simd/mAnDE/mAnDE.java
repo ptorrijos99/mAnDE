@@ -37,186 +37,186 @@ public class mAnDE extends AbstractClassifier implements
         OptionHandler {
 
     /**
-     * Para serialización.
+     * For serialisation.
      */
     private static final long serialVersionUID = 3545430914549890589L;
 
-    // Variables auxialiares //
+    // Auxiliary variables //
     /**
-     * Instancias.
+     * Instances.
      */
     protected static Instances data;
 
     /**
-     * El filtro de discretización.
+     * The discretisation filter.
      */
-    protected weka.filters.supervised.attribute.Discretize discretizador = null;
+    protected weka.filters.supervised.attribute.Discretize discretizer = null;
 
     /**
-     * Filtro de discretización para "discretizar4".
+     * Discretisation filter for "discretize4".
      */
-    protected Discretize discretizadorNS = null;
+    protected Discretize discretizerNS = null;
 
     /**
-     * HashMap que contiene a los mSPnDEs.
+     * HashMap containing the mSPnDEs.
      */
     private HashMap<Integer, Object> mSPnDEs;
 
     /**
-     * HashMap para convertir de nombre de variable a índice.
+     * HashMap to convert from variable name to index.
      */
     public static HashMap<String, Integer> nToI;
 
     /**
-     * HashMap para convertir de índice de variable a nombre.
+     * HashMap to convert from variable index to name.
      */
     public static HashMap<Integer, String> iToN;
 
     /**
-     * Número de valores por variable.
+     * Number of values per variable.
      */
     public static int[] varNumValues;
 
     /**
-     * Número de valores de la clase.
+     * Number of values of the class.
      */
     public static int classNumValues;
 
     /**
-     * Índice de la clase.
+     * Index of the class.
      */
     public static int y;
 
     /**
-     * Número de instancias.
+     * Number of instances.
      */
     public static int numInstances;
 
     /**
-     * Variable para comprobar si algún valor es cero.
+     * Variable to check if any value is zero.
      */
-    private static int[] ceros;
+    private static int[] zeros;
 
     /**
-     * Naive Bayes para el modo NB.
+     * Naive Bayes for NB mode.
      */
     private static NaiveBayes nb;
 
     /**
-     * Indica si el modo Naive Bayes está activado.
+     * Indicates whether Naive Bayes mode is enabled.
      */
-    private boolean modoNB = false;
+    private boolean modeNB = false;
 
     /**
-     * Indica si se ha discretizado.
+     * Indicates whether discretised.
      */
-    private boolean discretizado = false;
+    private boolean discretized = false;
 
-    // Parámetros de mAnDE //
+    // mAnDE parameters //
     /**
-     * Realiza árboles de Chow-Liu en lugar de árboles de decisión.
+     * Performs Chow-Liu trees instead of decision trees.
      */
     private boolean chowLiu = false;
 
     /**
-     * Realiza árboles REPTree en lugar de J48.
+     * Performs REPTree trees instead of J48.
      */
     private boolean repTree = false;
 
     /**
-     * Poda los árboles de decisión.
+     * Prune decision trees.
      */
-    private boolean poda = true;
+    private boolean pruning = true;
 
     /**
-     * Completa mAnDE con los mSPnDEs que no se hayan añadido.
+     * Complete mAnDE with mSPnDEs that have not been added.
      */
-    private boolean completa = false;
+    private boolean complete = false;
 
     /**
-     * Ejecuta un árboles, y para cada variable del mismo un nuevo árbol en el que dicha variable actúe como clase.
+     * Execute a tree, and for each variable in the tree a new tree in which that variable acts as a class.
      */
-    private boolean variosArboles = false;
+    private boolean variousTrees = false;
 
     /**
-     * Ejecuta un ensemble de árboles de decisión en lugar de un solo árbol.
+     * Runs a set of decision trees instead of a single tree.
      */
     private boolean ensemble = false;
 
     /**
-     * Ejecuta un Random Forest en lugar de Bagging.
+     * Runs a Random Forest instead of Bagging.
      */
     private boolean randomForest = true;
 
     /**
-     * Porcentaje de instancias que se utilizarán para realizar cada árbol del ensemble.
+     * Percentage of instances to be used to make each tree in the assembly.
      */
     private double bagSize = 100;
 
     /**
-     * n del mAnDE.
+     * n of the mAnDE.
      */
     private int n = 1;
 
     /**
-     * Discretiza antes de ejecutar el árbol.
+     * Discretize before executing the tree.
      */
-    private boolean discretizarAntes = true;
+    private boolean discretizeBefore = true;
 
     /**
-     * Discretiza en 4 intervalos las variables no discretizadas.
+     * Discretize non-discretized variables into 4 intervals.
      */
-    private boolean discretizar4 = false;
+    private boolean discretize4 = false;
 
     /**
-     * Usa mayoría en lugar de suma de probabilidades.
+     * Uses majority instead of sum of probabilities.
      */
-    private boolean mayoria = false;
+    private boolean majority = false;
 
     /**
-     * Crea la estructura del clasificador teniendo en cuenta los parámetros establecidos.
+     * Create the structure of the classifier taking into account the established parameters.
      *
-     * @param instances Instancias a clasificar.
+     * @param instances Instances to classify.
      * @throws java.lang.Exception
      */
     @Override
     public void buildClassifier(Instances instances) throws Exception {
-        // ¿El clasificador puede trabajar con esos datos?
+        // Can the classifier work with this data?
         getCapabilities().testWithFail(instances);
 
-        // Eliminar instancias sin clase
+        // Delete instances with no class
         instances.deleteWithMissingClass();
 
-        // Comprobamos si tenemos que discretizar ahora o más tarde
-        if (isDiscretizarAntes()) {
+        // We check if we need to discretise now or later.
+        if (isDiscretizeBefore()) {
             data = new Instances(instances);
-            discretizar(instances);
-            // Liberamos el espacio de los datos por parámetro
+            discretize(instances);
+            // Free up the data space by parameter
             instances.delete();
         } else {
             data = instances;
         }
 
-        // Inicializamos los diccionarios de índices
-        inicializaNomToIndex();
+        // We initialize the index dictionaries
+        initializeNameToIndex();
 
-        // Creamos los mSPnDE's
+        // Create the mSPnDE's
         try {
-            crea_mSPnDEs();
+            build_mSPnDEs();
         } catch (Exception ex) {
         }
 
-        // Si no hemos creado mSPnDE's
+        // If we have not created mSPnDE's
         if (mSPnDEs.isEmpty()) {
-            boolean empieza1 = false;
+            boolean starts1 = false;
             if (!isEnsemble()) {
-                empieza1 = true;
+                starts1 = true;
             }
             while (true) {
-                if (!isEnsemble() && !empieza1) {
-                    // Si no podemos ejecutar de ninguna manera, ejecutamos Naive Bayes
-                    System.out.println("NO SE PUEDE EJECUTAR. EJECUTAMOS NAIVE BAYES.");
-                    modoNB = true;
+                if (!isEnsemble() && !starts1) {
+                    // If we cannot execute at all, we run Naive Bayes.
+                    System.out.println("CAN'T RUN. WE RUN NAIVE BAYES.");
+                    modeNB = true;
                     nb = new NaiveBayes();
                     nb.buildClassifier(data);
                     break;
@@ -232,33 +232,33 @@ public class mAnDE extends AbstractClassifier implements
                             bagSize = 100;
                         } else {
                             setEnsemble(false);
-                            empieza1 = false;
+                            starts1 = false;
                         }
                     }
                 }
                 try {
-                    crea_mSPnDEs();
+                    build_mSPnDEs();
                 } catch (Exception ex) {
                 }
 
-                // Si hemos creado mSPnDEs, terminamos
+                // If we have created mSPnDEs, we end up with
                 if (!mSPnDEs.isEmpty()) {
                     break;
                 }
             }
         }
-        System.out.println("  mSPnDEs creados");
+        System.out.println("  mSPnDEs created");
 
-        // Discretizamos si no lo hemos hecho al principio
-        if (!isDiscretizarAntes()) {
-            discretizar(instances);
-            // Liberamos el espacio de los datos por parámetro
+        // We discretise if we have not done so at the beginning.
+        if (!isDiscretizeBefore()) {
+            discretize(instances);
+            // Free the data space per parameter
             instances.delete();
         }
 
-        // Si no hemos ejecutado Naive Bayes, calculamos las tablas de mAnDE
-        if (!modoNB) {
-            // Definimos variables globales
+        // If we have not run Naive Bayes, we calculate the mAnDE tables.
+        if (!modeNB) {
+            // Define global variables
             y = data.classIndex();
             classNumValues = data.classAttribute().numValues();
             varNumValues = new int[data.numAttributes()];
@@ -267,20 +267,20 @@ public class mAnDE extends AbstractClassifier implements
             }
             numInstances = data.numInstances();
 
-            calculaTablas_mSPnDEs();
+            calculateTables_mSPnDEs();
         }
 
-        // Liberamos el espacio de los datos discretizados
+        // We free up the discretised data space
         data.delete();
 
-        nSPnDEsyVariables();
+        nSPnDEs_variables();
     }
 
     /**
-     * Calcula las probabilidades de pertenencia a la clase para la Instancia de test proporcionada.
+     * Calculates the probabilities of class membership for the provided Test Instance.
      *
-     * @param instance Instancia a clasificar.
-     * @return Distribución de probabilidad de pertenencia a la clase predicha.
+     * @param instance Instance to classify.
+     * @return Probability distribution of predicted class membership.
      * @throws java.lang.Exception
      */
     @Override
@@ -288,30 +288,30 @@ public class mAnDE extends AbstractClassifier implements
         double[] res = new double[classNumValues];
 
         final Instance instance_d;
-        // Si hemos discretizado alguna instancia con el discretizador No Supervisado
-        if (isDiscretizar4() && isDiscretizado() && (ceros != null)) {
-            discretizadorNS.input(instance);
-            discretizador.input(discretizadorNS.output());
-            instance_d = discretizador.output();
+        // If we have discretised any instances with the Unsupervised discretizer
+        if (isDiscretize4() && isDiscretized() && (zeros != null)) {
+            discretizerNS.input(instance);
+            discretizer.input(discretizerNS.output());
+            instance_d = discretizer.output();
         } else {
-            discretizador.input(instance);
-            instance_d = discretizador.output();
+            discretizer.input(instance);
+            instance_d = discretizer.output();
         }
 
-        if (modoNB) {
+        if (modeNB) {
             return nb.distributionForInstance(instance_d);
         }
 
-        // Suma todas las probabilidades de los mSPnDE's
+        // Add up all the probabilities of the mSPnDEs
         mSPnDEs.forEach((id, spode) -> {
             double[] temp = new double[0];
             if (getN() == 1) {
-                temp = ((mSP1DE) spode).probabilidadesParaInstancia(instance_d);
+                temp = ((mSP1DE) spode).probsForInstance(instance_d);
             } else if (getN() == 2) {
-                temp = ((mSP2DE) spode).probabilidadesParaInstancia(instance_d);
+                temp = ((mSP2DE) spode).probsForInstance(instance_d);
             }
 
-            if (isMayoria()) {
+            if (isMajority()) {
                 res[Utils.maxIndex(temp)]++;
             } else {
                 for (int i = 0; i < res.length; i++) {
@@ -320,9 +320,9 @@ public class mAnDE extends AbstractClassifier implements
             }
         });
 
-        /* Normaliza el resultado. Si la suma es 0 (Utils.normalize nos devolverá
-         * un IllegalArgumentException), establecemos el mismo valor en cada 
-         * posible valor de la clase.
+        /* Normalize the result. If the sum is 0 (Utils.normalize will return 
+         * an IllegalArgumentException), we set the same value in each 
+         * possible value of the class.
          */
         try {
             Utils.normalize(res);
@@ -336,21 +336,22 @@ public class mAnDE extends AbstractClassifier implements
     }
 
     /**
-     * Función que realiza la discretización, comprobando el parámetro "discretizar4" para realizar dicha discretización o no.
+     * Function that performs the discretisation, checking the "discretize4" parameter to perform the discretisation or not.
      *
-     * @param instances Instancias a discretizar
-     * @throws Exception
+     * @param instances Instances to be discretised
+     * * @throws Exception
      */
-    private void discretizar(Instances instances) throws Exception {
-        // Si vamos a discretizar en 4 trozos las variables que se queden
-        // enteras en un intervalo
-        if (isDiscretizar4()) {
-            // Discretizar instancias si es necesario
-            discretizador = new weka.filters.supervised.attribute.Discretize();
-            discretizador.setInputFormat(instances);
-            instances = weka.filters.Filter.useFilter(instances, discretizador);
+       
+    private void discretize(Instances instances) throws Exception {
+        // If we are going to discretise in 4 chunks the variables that stay
+        // integers in an interval.
+        if (isDiscretize4()) {
+            // Discretize instances if necessary.
+            discretizer = new weka.filters.supervised.attribute.Discretize();
+            discretizer.setInputFormat(instances);
+            instances = weka.filters.Filter.useFilter(instances, discretizer);
 
-            // Añadimos las variables con solo un intervalo
+            // We add the variables with only one interval.
             ArrayList<Integer> temp = new ArrayList();
             for (int i = 0; i < instances.numAttributes(); i++) {
                 if (instances.attribute(i).numValues() == 1) {
@@ -358,136 +359,136 @@ public class mAnDE extends AbstractClassifier implements
                 }
             }
 
-            // Si hay, tenemos que discretizar por igual anchura
+            // If there is, we have to discretise by equal width.
             if (!temp.isEmpty()) {
-                ceros = new int[temp.size()];
-                for (int i = 0; i < ceros.length; i++) {
-                    ceros[i] = temp.get(i);
+                zeros = new int[temp.size()];
+                for (int i = 0; i < zeros.length; i++) {
+                    zeros[i] = temp.get(i);
                 }
 
-                // Primero discretizamos las variables por igual anchura (4 bins)
-                discretizadorNS = new Discretize();
-                discretizadorNS.setBins(4);
-                discretizadorNS.setInputFormat(data);
-                discretizadorNS.setAttributeIndicesArray(ceros);
-                data = weka.filters.Filter.useFilter(data, discretizadorNS);
-                setDiscretizado(true);
+                // First we discretise the variables by equal width (4 bins).
+                discretizerNS = new Discretize();
+                discretizerNS.setBins(4);
+                discretizerNS.setInputFormat(data);
+                discretizerNS.setAttributeIndicesArray(zeros);
+                data = weka.filters.Filter.useFilter(data, discretizerNS);
+                setDiscretized(true);
 
-                // Y luego el resto de variables
-                discretizador = new weka.filters.supervised.attribute.Discretize();
-                discretizador.setInputFormat(data);
-                data = weka.filters.Filter.useFilter(data, discretizador);
+                // And then the rest of the variables
+                discretizer = new weka.filters.supervised.attribute.Discretize();
+                discretizer.setInputFormat(data);
+                data = weka.filters.Filter.useFilter(data, discretizer);
             } else {
-                // Si no, directamente la discretización es "instances"
+                // Otherwise, the discretization is "instances" directly
                 data = new Instances(instances);
             }
-        } // Si solo vamos a discretizar una vez
+        } // If we're only going to discretize once
         else {
-            discretizador = new weka.filters.supervised.attribute.Discretize();
-            discretizador.setInputFormat(data);
-            data = weka.filters.Filter.useFilter(data, discretizador);
+            discretizer = new weka.filters.supervised.attribute.Discretize();
+            discretizer.setInputFormat(data);
+            data = weka.filters.Filter.useFilter(data, discretizer);
         }
     }
 
-    /**
-     * Crea los mSPnDE's necesarios, ejecutando los árboles establecidos en las opciones..
+     /**
+     * Create the necessary mSPnDE's, by running the trees set in the options...
      */
-    private void crea_mSPnDEs() throws Exception {
+    private void build_mSPnDEs() throws Exception {
         mSPnDEs = new HashMap<>();
 
         if (chowLiu) {
-            usaChowLiu();
+            useChowLiu();
         } else {
-            if (variosArboles) {
-                variosArboles();
+            if (variousTrees) {
+                variousTrees();
             } else {
-                Classifier[] arboles;
+                Classifier[] trees;
 
                 J48 j48 = new J48();
                 Bagging bagging;
                 REPTree repT = new REPTree();
 
-                // Definimos si queremos poda o no
-                if (!poda) {
+                // We define whether we want pruning or not.
+                if (!pruning) {
                     j48.setUnpruned(true);
                     repT.setNoPruning(true);
                 }
 
-                String[] opciones = new String[2];
-                opciones[0] = "-num-slots";
-                opciones[1] = "0";
+                String[] options = new String[2];
+                options[0] = "-num-slots";
+                options[1] = "0";
 
                 if (ensemble) {
                     if (randomForest) {
-                        System.out.println("Ejecuta Random Forest");
+                        System.out.println("Run Random Forest");
                         RandomForest rf = new RandomForest();
-                        // Establecemos el número de hilos en paralelo a 0 (automáticos)
-                        rf.setOptions(opciones);
+                        // Set the number of parallel wires to 0 (automatic)
+                        rf.setOptions(options);
                         rf.setNumIterations(10);
                         rf.setBagSizePercent(bagSize);
                         rf.buildClassifier(data);
-                        arboles = rf.getClassifiers();
-                        for (Classifier arbol : arboles) {
-                            graphToSPnDE(arbolParser(arbol));
+                        trees = rf.getClassifiers();
+                        for (Classifier tree : trees) {
+                            graphToSPnDE(treeParser(tree));
                         }
                     } else {
-                        System.out.println("Ejecuta Bagging");
+                        System.out.println("Ejecute Bagging");
                         bagging = new Bagging();
                         if (repTree) {
                             bagging.setClassifier(repT);
                         } else {
                             bagging.setClassifier(j48);
                         }
-                        // Establecemos el número de hilos en paralelo a 0 (automáticos)
-                        bagging.setOptions(opciones);
+                        // Set the number of parallel wires to 0 (automatic)
+                        bagging.setOptions(options);
                         bagging.setNumIterations(10);
                         bagging.setBagSizePercent(bagSize);
                         bagging.buildClassifier(data);
-                        arboles = bagging.getClassifiers();
-                        for (Classifier arbol : arboles) {
-                            graphToSPnDE(arbolParser(arbol));
+                        trees = bagging.getClassifiers();
+                        for (Classifier tree : trees) {
+                            graphToSPnDE(treeParser(tree));
                         }
                     }
                 } else {
                     if (repTree) {
                         repT.buildClassifier(data);
-                        graphToSPnDE(arbolParser(repT));
+                        graphToSPnDE(treeParser(repT));
                     } else {
                         j48.buildClassifier(data);
-                        graphToSPnDE(arbolParser(j48));
+                        graphToSPnDE(treeParser(j48));
                     }
                 }
             }
 
-            // Si queremos añadir mSP1DE's con las variables que no están en el árbol
-            if (isCompleta()) {
+            // If we want to add mSP1DE's with variables not in the tree
+            if (isComplete()) {
                 if (getN() == 1) {
-                    completaTodos_mSP1DEs();
+                    completeAll_mSP1DEs();
                 } else {
-                    System.out.println("Completa solo puede usarse con n = 1. Se procede a desactivarlo.");
+                    System.out.println("Complete can only be used with n = 1.");
                 }
             }
         }
     }
 
     /**
-     * Lee el clasificador pasado por parámetro y devuelve un HashMap<String,Node> con los datos del mismo.
+     * Reads the classifier passed by parameter and returns a HashMap<String,Node> with the classifier data.
      *
-     * @param clasificador Clasificador a parsear
+     * @param classifier Classifier to be parsed
      */
-    private HashMap<String, Node> arbolParser(Classifier clasificador) {
+    private HashMap<String, Node> treeParser(Classifier clasificador) {
         String[] lines = new String[0];
         try {
             lines = ((Drawable) clasificador).graph().split("\r\n|\r|\n");
         } catch (Exception ex) {
         }
 
-        HashMap<String, Node> nodos = new HashMap();
-        int inicio = -1, fin = -1;
+        HashMap<String, Node> nodes = new HashMap();
+        int init = -1, fin = -1;
 
         for (int i = 0; i < lines.length; i++) {
             if (lines[i].contains(" [label")) {
-                inicio = i;
+                init = i;
                 break;
             }
         }
@@ -498,47 +499,48 @@ public class mAnDE extends AbstractClassifier implements
             }
         }
 
-        if (inicio != -1) {
-            // Añadimos al padre
+        if (init != -1) {
+            // We add the father
             //N0 [label="petallength" ]             J48
             //N58640b4a [label="1: petalwidth"]     RandomTree
-            String id = lines[inicio].substring(0, lines[inicio].indexOf(" [label"));
-            String nombre = "", finLabel;
-            if (lines[inicio].contains(": ")) {
-                // RandomTree y REPTree
+            String id = lines[init].substring(0, lines[init].indexOf(" [label"));
+            String name = "", finLabel;
+            if (lines[init].contains(": ")) {
+                // RandomTree and REPTree
                 try {
-                    nombre = lines[inicio].substring(lines[inicio].indexOf(": ") + 2, lines[inicio].indexOf("\"]"));
+                    name = lines[init].substring(lines[init].indexOf(": ") + 2, lines[init].indexOf("\"]"));
                 } catch (Exception ex) {
                 }
             } else {
                 // J48
                 try {
-                    nombre = lines[inicio].substring(lines[inicio].indexOf("=\"") + 2, lines[inicio].indexOf("\" ]"));
+                    name = lines[init].substring(lines[init].indexOf("=\"") + 2, lines[init].indexOf("\" ]"));
                 } catch (Exception ex) {
                 }
             }
 
-            if (!"".equals(nombre)) {
-                if (!nToI.containsKey(nombre)) {
-                    nombre = nombre.replace("\\", "");
+            if (!"".equals(name)) {
+                if (!nToI.containsKey(name)) {
+                    name = name.replace("\\", "");
                 }
-                Node padre = new Node(id, nombre);
-                nodos.put(id, padre);
+                Node father = new Node(id, name);
+                nodes.put(id, father);
             }
 
-            for (int i = inicio + 1; i < fin; i++) {
+            for (int i = init + 1; i < fin; i++) {
                 //N0->N1 [label="= \'(-inf-2.6]\'"]                     J48
-                //N529c603a->N6f5883ef [label=" = \'(5.45-5.75]\'"]     RandomTree y REPTree
+                //N529c603a->N6f5883ef [label=" = \'(5.45-5.75]\'"]     RandomTree and REPTree
                 if (lines[i].contains("->")) {
                     String id1 = lines[i].substring(0, lines[i].indexOf("->"));
                     String id2 = lines[i].substring(lines[i].indexOf("->") + 2, lines[i].indexOf(" [label"));
 
-                    if (nodos.get(id2) == null) {
-                        nodos.put(id2, new Node(id2, nodos.get(id1)));
+                    if (nodes.get(id2) == null) {
+                        nodes.put(id2, new Node(id2, nodes.get(id1)));
                     }
-                    nodos.get(id1).addHijo(nodos.get(id2));
-                } //N0 [label="petallength" ]                J48
-                //N58640b4a [label="1: petalwidth"]        RandomTree y REPTree
+                    nodes.get(id1).addChild(nodes.get(id2));
+                } 
+                //N0 [label="petallength" ]                J48
+                //N58640b4a [label="1: petalwidth"]        RandomTree and REPTree
                 else if (!lines[i].contains(" (")) {
                     if (lines[i].contains("\" ]")) {
                         finLabel = "\" ]";
@@ -553,44 +555,44 @@ public class mAnDE extends AbstractClassifier implements
                     }
 
                     if (lines[i].contains(" : ")) {
-                        // RandomTree y REPTree
-                        nombre = lines[i].substring(lines[i].indexOf(" : ") + 3, lines[i].indexOf(finLabel));
+                        // RandomTree and REPTree
+                        name = lines[i].substring(lines[i].indexOf(" : ") + 3, lines[i].indexOf(finLabel));
                     } else if (lines[i].contains(": ")) {
-                        // RandomTree y REPTree
-                        nombre = lines[i].substring(lines[i].indexOf(": ") + 2, lines[i].indexOf(finLabel));
+                        // RandomTree and REPTree
+                        name = lines[i].substring(lines[i].indexOf(": ") + 2, lines[i].indexOf(finLabel));
                     } else {
                         // J48
-                        nombre = lines[i].substring(lines[i].indexOf("=\"") + 2, lines[i].indexOf(finLabel));
+                        name = lines[i].substring(lines[i].indexOf("=\"") + 2, lines[i].indexOf(finLabel));
                     }
 
-                    if (!nToI.containsKey(nombre)) {
-                        nombre = nombre.replace("\\", "");
+                    if (!nToI.containsKey(name)) {
+                        name = name.replace("\\", "");
                     }
-                    nodos.get(id).setNombre(nombre);
+                    nodes.get(id).setName(name);
                 }
             }
         }
-        return nodos;
+        return nodes;
     }
 
     /**
-     * Convierte un HashMap<String,Node> a una representación de mAnDE.
+     * Converts a HashMap<String,Node> to a representation of mAnDE.
      */
-    private void graphToSPnDE(HashMap<String, Node> nodos) {
+    private void graphToSPnDE(HashMap<String, Node> nodes) {
         if (getN() == 1) {
-            nodos.values().forEach((nodo) -> {
-                nodo.getHijos().values().forEach((hijo) -> {
-                    if (!nodo.getNombre().equals("") && !hijo.getNombre().equals("")) {
-                        toSP1DE(nodo.getNombre(), hijo.getNombre());
+            nodes.values().forEach((nodo) -> {
+                nodo.getChildren().values().forEach((child) -> {
+                    if (!nodo.getName().equals("") && !child.getName().equals("")) {
+                        toSP1DE(nodo.getName(), child.getName());
                     }
                 });
             });
         } else if (getN() == 2) {
-            nodos.values().forEach((nodo) -> {
-                nodo.getHijos().values().forEach((hijo) -> {
-                    if (!nodo.getNombre().equals("") && !hijo.getNombre().equals("")) {
-                        toSP2DE(nodo.getNombre(), hijo.getNombre(), nodo.getPadre().getNombre(),
-                                nodo.getHijosArray(hijo.getNombre()), hijo.getHijosArray());
+            nodes.values().forEach((nodo) -> {
+                nodo.getChildren().values().forEach((child) -> {
+                    if (!nodo.getName().equals("") && !child.getName().equals("")) {
+                        toSP2DE(nodo.getName(), child.getName(), nodo.getParent().getName(),
+                                nodo.getChildrenArray(child.getName()), child.getChildrenArray());
                     }
                 });
             });
@@ -599,23 +601,23 @@ public class mAnDE extends AbstractClassifier implements
     }
 
     /**
-     * Crea un mSP1DE con la variable 'padre' (si no existe ya), y le añade como dependencia la variable 'hijo', y viceversa.
+     * Create an mSP1DE with the variable 'parent' (if it doesn't already exist), and add the variable 'child' as a dependency, and vice versa.
      *
-     * @param padre Nombre del padre en el mSP1DE.
-     * @param hijo Nombre del hijo en el mSP1DE.
+     * @param parent Name of the parent in the mSP1DE.
+     * @param child Name of the child in the mSP1DE.
      */
-    private void toSP1DE(String padre, String hijo) {
-        if (!padre.equals(hijo)) {
-            if (!mSPnDEs.containsKey(padre.hashCode())) {
-                mSPnDEs.put(padre.hashCode(), new mSP1DE(padre));
+    private void toSP1DE(String parent, String child) {
+        if (!parent.equals(child)) {
+            if (!mSPnDEs.containsKey(parent.hashCode())) {
+                mSPnDEs.put(parent.hashCode(), new mSP1DE(parent));
             }
-            if (!hijo.equals("")) {
-                if (!mSPnDEs.containsKey(hijo.hashCode())) {
-                    mSPnDEs.put(hijo.hashCode(), new mSP1DE(hijo));
+            if (!child.equals("")) {
+                if (!mSPnDEs.containsKey(child.hashCode())) {
+                    mSPnDEs.put(child.hashCode(), new mSP1DE(child));
                 }
                 try {
-                    ((mSP1DE) mSPnDEs.get(padre.hashCode())).masHijos(hijo);
-                    ((mSP1DE) mSPnDEs.get(hijo.hashCode())).masHijos(padre);
+                    ((mSP1DE) mSPnDEs.get(parent.hashCode())).moreChildren(child);
+                    ((mSP1DE) mSPnDEs.get(child.hashCode())).moreChildren(parent);
                 } catch (NullPointerException ex) {
                 }
             }
@@ -623,109 +625,112 @@ public class mAnDE extends AbstractClassifier implements
     }
 
     /**
-     * Crea un mSP2DE con la variable 'padre' (si no existe ya), y le añade como dependencia la variable 'hijo', y viceversa.
+     * Create an mSP2DE with the variable 'parent' (if it doesn't already exist), and add the variable 'child' as a dependency, and vice versa.
      *
-     * @param padre Nombre del padre en el mSP2DE.
-     * @param hijo Nombre del hijo en el mSP2DE.
-     * @param abuelo Nombre del padre del padre en el mSP2DE.
-     * @param hermanos Nombre de los otros hijos del padre el mSP2DE.
-     * @param nietos Nombre de los hijos del hijo el mSP2DE.
+     * @param parent Name of the parent in the mSP2DE.
+     * @param child Name of the child in the mSP2DE.
+     * @param grandparent Name of the parent of the parent in the mSP2DE.
+     * @param brothers Name of the other children of the father in the mSP2DE.
+     * @param grandchildren Name of the children of the child in the mSP2DE.
      */
-    private void toSP2DE(String padre, String hijo, String abuelo,
-            ArrayList<String> hermanos, ArrayList<String> nietos) {
-        if (!padre.equals(hijo)) {
-            if (!mSPnDEs.containsKey(padre.hashCode() + hijo.hashCode())) {
-                mSPnDEs.put(padre.hashCode() + hijo.hashCode(), new mSP2DE(padre, hijo));
+    private void toSP2DE(String parent, String child, String grandparent,
+            ArrayList<String> brothers, ArrayList<String> grandchildren) {
+        if (!parent.equals(child)) {
+            if (!mSPnDEs.containsKey(parent.hashCode() + child.hashCode())) {
+                mSPnDEs.put(parent.hashCode() + child.hashCode(), new mSP2DE(parent, child));
             }
             try {
-                mSP2DE elem = ((mSP2DE) mSPnDEs.get(padre.hashCode() + hijo.hashCode()));
-                if (!abuelo.equals(padre)) {
-                    elem.masHijos(abuelo);
+                mSP2DE elem = ((mSP2DE) mSPnDEs.get(parent.hashCode() + child.hashCode()));
+                if (!grandparent.equals(parent)) {
+                    elem.moreChildren(grandparent);
                 }
-                elem.masHijos(hermanos);
-                elem.masHijos(nietos);
+                elem.moreChildren(brothers);
+                elem.moreChildren(grandchildren);
             } catch (NullPointerException ex) {
             }
         }
     }
 
     /**
-     * Ejecuta en paralelo las funciones 'creaTabla()' de cada mSPnDE, y termina cuando todos la hayan ejecutado.
+     * Executes in parallel the 'creaTabla()' functions of each mSPnDE, 
+     * and terminates when all have executed it.
      */
-    private void calculaTablas_mSPnDEs() {
+    private void calculateTables_mSPnDEs() {
         List<Object> list = new ArrayList<>(mSPnDEs.values());
 
-        //Crea el pool de hilos, uno para cada mSP1DE
+         //Create the thread pool, one for each mSPnDEs
         ExecutorService executor = Executors.newFixedThreadPool(mSPnDEs.size());
 
-        //Llama a la función del mSP1DE que crea la tabla para cada mSP1DE
+        //Calls the mSP1DE function that creates the table for each mSP1DE
         list.forEach((spode) -> {
             executor.execute(() -> {
                 if (getN() == 1) {
-                    ((mSP1DE) spode).creaTablas();
+                    ((mSP1DE) spode).buildTables();
                 } else if (getN() == 2) {
-                    ((mSP2DE) spode).creaTablas();
+                    ((mSP2DE) spode).buildTables();
                 }
             });
         });
 
-        executor.shutdown();    //Deja de admitir llamadas 
+        //Stop supporting calls 
         try {
-            //Espera hasta que acaben todos (a los T días para)
+            //Wait until they are all finished (at T days stop)
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
         } catch (InterruptedException ex) {
         }
     }
 
     /**
-     * Método de ejecución utilizando árboles de Chow-Liu en lugar de árboles de decisión.
+     * Method of execution using Chow-Liu trees instead of decision trees.
      *
      * @throws Exception
      */
-    private void usaChowLiu() throws Exception {
-        // Creamos el clasificador TAN, el cual crea un árbol de Chow-Liu ampliado
+    private void useChowLiu() throws Exception {
+        // We create the TAN classifier, which creates an extended Chow-Liu tree.
         BayesNet net = new BayesNet();
         weka.classifiers.bayes.net.search.local.TAN tan = new weka.classifiers.bayes.net.search.local.TAN();
         net.setSearchAlgorithm(tan);
         net.buildClassifier(data);
 
-        // Parseamos el árbol generado
+        // Parse the generated tree
         String[] lines = new String[0];
         try {
             lines = net.toString().split("\r\n|\r|\n");
         } catch (Exception ex) {
         }
 
-        HashMap<String, Node> nodos = new HashMap();
+        HashMap<String, Node> nodes = new HashMap();
 
         for (int i = 4; i < lines.length; i++) {
             //att_1(1): class att_15   TAN
             String[] actual = lines[i].split(" ");
             if (!"LogScore".equals(actual[0])) {
-                // Si es 3, un nodo tiene como padre a otro nodo y la clase
+                // If 3, a node has another node as a parent and class
                 if (actual.length == 3) {
-                    // Removemos la parte sobrante del primer nombre
+                    // We remove the excess part of the first name.
                     actual[0] = actual[0].substring(0, lines[i].indexOf("("));
 
-                    if (nodos.get(actual[2]) == null) {
-                        nodos.put(actual[2], new Node(actual[2], actual[2]));
+                    if (nodes.get(actual[2]) == null) {
+                        nodes.put(actual[2], new Node(actual[2], actual[2]));
                     }
-                    if (nodos.get(actual[0]) == null) {
-                        nodos.put(actual[0], new Node(actual[0], actual[0]));
+                    if (nodes.get(actual[0]) == null) {
+                        nodes.put(actual[0], new Node(actual[0], actual[0]));
                     }
-                    nodos.get(actual[0]).setPadre(nodos.get(actual[2]));
-                    nodos.get(actual[2]).addHijo(nodos.get(actual[0]));
+                    nodes.get(actual[0]).setParent(nodes.get(actual[2]));
+                    nodes.get(actual[2]).addChild(nodes.get(actual[0]));
                 }
             }
         }
 
-        graphToSPnDE(nodos);
+        graphToSPnDE(nodes);
     }
 
     /**
-     * Método que cambia la ejecución, ejecutando un árbol, y para las variables que aparezcan en el mismo, otro árbol en el cual éstas se comporten como la clase.
+     * Method that changes the execution, executing a tree, and for the 
+     * variables that appear in it, another tree in which these behave 
+     * like the class.
      */
-    private void variosArboles() {
+    private void variousTrees() {
         HashSet<String> variables = new HashSet();
         J48 j48 = new J48();
         try {
@@ -733,40 +738,40 @@ public class mAnDE extends AbstractClassifier implements
         } catch (Exception ex) {
         }
 
-        // Obtenemos el nombre de las variables que aparecen en el árbol
-        arbolParser(j48).values().forEach((var) -> {
-            if (!"".equals(var.getNombre())) {
-                variables.add(var.getNombre());
+        // We get the name of the variables that appear in the tree
+        treeParser(j48).values().forEach((var) -> {
+            if (!"".equals(var.getName())) {
+                variables.add(var.getName());
             }
         });
 
         int classIndex = data.classIndex();
 
-        // Para cada una, vamos a ejecutar el árbol
+        // For each one, let's run the tree
         variables.forEach((var) -> {
-            J48 arbol = new J48();
+            J48 tree = new J48();
             data.setClassIndex(nToI.get(var));
             try {
-                arbol.buildClassifier(data);
+                tree.buildClassifier(data);
             } catch (Exception ex) {
             }
 
-            HashSet<String> nuevasVariables = new HashSet();
-            // Obtenemos el nombre de las variables
-            arbolParser(arbol).values().forEach((var2) -> {
-                if (!"".equals(var2.getNombre())) {
-                    nuevasVariables.add(var2.getNombre());
+            HashSet<String> newVariables = new HashSet();
+            // We get the name of the variables
+            treeParser(tree).values().forEach((var2) -> {
+                if (!"".equals(var2.getName())) {
+                    newVariables.add(var2.getName());
                 }
             });
 
-            // Si la clase está dentro del árbol creado
-            if (nuevasVariables.contains(iToN.get(classIndex))) {
+            // If the class is inside the created tree
+            if (newVariables.contains(iToN.get(classIndex))) {
                 if (!mSPnDEs.containsKey(var.hashCode())) {
                     mSPnDEs.put(var.hashCode(), new mSP1DE(var));
                 }
-                nuevasVariables.forEach((temp) -> {
+                newVariables.forEach((temp) -> {
                     if (!temp.equals(classIndex)) {
-                        ((mSP1DE) mSPnDEs.get(var.hashCode())).masHijos(temp);
+                        ((mSP1DE) mSPnDEs.get(var.hashCode())).moreChildren(temp);
                     }
                 });
             }
@@ -776,9 +781,9 @@ public class mAnDE extends AbstractClassifier implements
     }
 
     /**
-     * Añade los mSP1DE's que no se hayan creado después de parsear los árboles. Cada uno de ellos no tendrá hijos, por lo que su probabilidad será P(Xi|y).
+     * Add the mSP1DE's that have not been created after parsing the trees. Each of them will have no children, so their probability will be P(Xi|y).
      */
-    private void completaTodos_mSP1DEs() {
+    private void completeAll_mSP1DEs() {
         for (int i = 0; i < data.numAttributes(); i++) {
             if (!mSPnDEs.containsKey(iToN.get(i).hashCode())) {
                 mSPnDEs.put(iToN.get(i).hashCode(), new mSP1DE(iToN.get(i)));
@@ -787,9 +792,9 @@ public class mAnDE extends AbstractClassifier implements
     }
 
     /**
-     * Inicializa los HashMap para convertir índices a nombres.
+     * Initialise HashMaps to convert indexes to names.
      */
-    private void inicializaNomToIndex() {
+    private void initializeNameToIndex() {
         nToI = new HashMap<>();
         iToN = new HashMap<>();
         for (int i = 0; i < data.numAttributes(); i++) {
@@ -799,76 +804,76 @@ public class mAnDE extends AbstractClassifier implements
     }
 
     /**
-     * Devuelve el número de nSPnDEs y de Variables por nSPnDE.
+     * Returns the number of nSPnDEs and Variables per nSPnDE.
      *
-     * @return El número de nSPnDEs y de Variables por nSPnDE
+     * @return The number of nSPnDEs and Variables per nSPnDE.
      * @throws java.io.IOException
      */
-    public double[] nSPnDEsyVariables() throws IOException {
+    public double[] nSPnDEs_variables() throws IOException {
         double[] res = new double[2];
         res[0] = mSPnDEs.size();
         res[1] = 0;
         mSPnDEs.values().forEach((spode) -> {
             if (getN() == 1) {
-                res[1] += (((mSP1DE) spode).getNHijos() / res[0]);
+                res[1] += (((mSP1DE) spode).getNChildren() / res[0]);
             } else if (getN() == 2) {
-                res[1] += (((mSP2DE) spode).getNHijos() / res[0]);
+                res[1] += (((mSP2DE) spode).getNChildren() / res[0]);
             }
         });
 
         File f = new File("temp.txt");
-        FileWriter fichero = new FileWriter(f, true);
-        PrintWriter pw = new PrintWriter(fichero, true);
+        FileWriter file = new FileWriter(f, true);
+        PrintWriter pw = new PrintWriter(file, true);
         pw.println(res[0] + "," + res[1]);
-        fichero.close();
+        file.close();
 
         return res;
     }
 
     /**
-     * @param chowLiu El hiperparámetro chowLiu a establecer
+     * @param chowLiu The chowLiu hyperparameter to be set.
      */
     public void setChowLiu(boolean chowLiu) {
         this.chowLiu = chowLiu;
     }
 
     /**
-     * @param poda El hiperparámetro poda a establecer
+     * @param pruning The pruning hyperparameter to set.
      */
-    public void setPoda(boolean poda) {
-        this.poda = poda;
+    public void setPruning(boolean pruning) {
+        this.pruning = pruning;
     }
 
     /**
-     * @param completa El hiperparámetro completa a establecer
+     * @param complete The complete hyperparameter to be set.
      */
-    public void setCompleta(boolean completa) {
-        this.completa = completa;
+    public void setComplete(boolean complete) {
+        this.complete = complete;
     }
 
     /**
-     * @param bagSize El hiperparámetro bagSize a establecer
+     * @param bagSize The bagSize hyperparameter to be set
      */
     public void setBagSize(double bagSize) {
         this.bagSize = bagSize;
     }
 
     /**
-     * @param discretizarAntes El hiperparámetro discretizarAntes a establecer
+     * @param discretizeBefore The discretizeBefore hyperparameter to be set
      */
-    public void setDiscretizarAntes(boolean discretizarAntes) {
-        this.discretizarAntes = discretizarAntes;
+    public void setDiscretizeBefore(boolean discretizeBefore) {
+        this.discretizeBefore = discretizeBefore;
     }
 
     /**
-     * @param discretizar4 El hiperparámetro discretizar4 a establecer
+     * @param discretize4 The discretize4 hyperparameter to be set
      */
-    public void setDiscretizar4(boolean discretizar4) {
-        this.discretizar4 = discretizar4;
+    public void setDiscretize4(boolean discretize4) {
+        this.discretize4 = discretize4;
     }
 
     /**
-     * @param n El hiperparámetro n a establecer
+     * @param n The n hyperparameter to be set
      */
     public void setN(int n) {
         if (n > 0 && n < 3) {
@@ -877,136 +882,136 @@ public class mAnDE extends AbstractClassifier implements
     }
 
     /**
-     * @param mayoria El hiperparámetro mayoria a establecer
+     * @param majority The majority hyperparameter to be set
      */
-    public void setMayoria(boolean mayoria) {
-        this.mayoria = mayoria;
+    public void setMajority(boolean majority) {
+        this.majority = majority;
     }
 
     /**
-     * @param repTree El hiperparámetro repTree a establecer
+     * @param repTree The repTree hyperparameter to be set
      */
     public void setRepTree(boolean repTree) {
         this.repTree = repTree;
     }
 
     /**
-     * @param variosArboles El hiperparámetro variosArboles a establecer
+     * @param variousTrees The variousTrees hyperparameter to be set
      */
-    public void setVariosArboles(boolean variosArboles) {
-        this.variosArboles = variosArboles;
+    public void setVariousTrees(boolean variousTrees) {
+        this.variousTrees = variousTrees;
     }
 
     /**
-     * @param ensemble El hiperparámetro ensemble a establecer
+     * @param ensemble The ensemble hyperparameter to be set
      */
     public void setEnsemble(boolean ensemble) {
         this.ensemble = ensemble;
     }
 
     /**
-     * @param randomForest El hiperparámetro randomForest a establecer
+     * @param randomForest The randomForest to be set
      */
     public void setRandomForest(boolean randomForest) {
         this.randomForest = randomForest;
     }
 
     /**
-     * @param discretizado El hiperparámetro discretizado a establecer
+     * @param discretized The discretized to be set
      */
-    public void setDiscretizado(boolean discretizado) {
-        this.discretizado = discretizado;
+    public void setDiscretized(boolean discretized) {
+        this.discretized = discretized;
     }
 
     /**
-     * @return El hiperparámetro discretizado
+     * @return The discretized
      */
-    public boolean isDiscretizado() {
-        return discretizado;
+    public boolean isDiscretized() {
+        return discretized;
     }
 
     /**
-     * @return El hiperparámetro chowLiu
+     * @return The chowLiu
      */
     public boolean isChowLiu() {
         return chowLiu;
     }
 
     /**
-     * @return El hiperparámetro repTree
+     * @return The repTree
      */
     public boolean isRepTree() {
         return repTree;
     }
 
     /**
-     * @return El hiperparámetro poda
+     * @return The pruning
      */
-    public boolean isPoda() {
-        return poda;
+    public boolean isPruning() {
+        return pruning;
     }
 
     /**
-     * @return El hiperparámetro completa
+     * @return The complete
      */
-    public boolean isCompleta() {
-        return completa;
+    public boolean isComplete() {
+        return complete;
     }
 
     /**
-     * @return El hiperparámetro variosArboles
+     * @return The variousTrees
      */
-    public boolean isVariosArboles() {
-        return variosArboles;
+    public boolean isVariousTrees() {
+        return variousTrees;
     }
 
     /**
-     * @return El hiperparámetro ensemble
+     * @return The ensemble
      */
     public boolean isEnsemble() {
         return ensemble;
     }
 
     /**
-     * @return El hiperparámetro randomForest
+     * @return The randomForest
      */
     public boolean isRandomForest() {
         return randomForest;
     }
 
     /**
-     * @return El hiperparámetro bagSize
+     * @return The bagSize
      */
     public double getBagSize() {
         return bagSize;
     }
 
     /**
-     * @return El hiperparámetro n
+     * @return The n
      */
     public int getN() {
         return n;
     }
 
     /**
-     * @return El hiperparámetro discretizarAntes
+     * @return The discretizeBefore
      */
-    public boolean isDiscretizarAntes() {
-        return discretizarAntes;
+    public boolean isDiscretizeBefore() {
+        return discretizeBefore;
     }
 
     /**
-     * @return El hiperparámetro discretizar4
+     * @return The discretize4
      */
-    public boolean isDiscretizar4() {
-        return discretizar4;
+    public boolean isDiscretize4() {
+        return discretize4;
     }
 
     /**
-     * @return El hiperparámetro mayoria
+     * @return The majority
      */
-    public boolean isMayoria() {
-        return mayoria;
+    public boolean isMajority() {
+        return majority;
     }
 
     /**
@@ -1038,28 +1043,28 @@ public class mAnDE extends AbstractClassifier implements
      */
     @Override
     public Enumeration listOptions() {
-        Vector newVector = new Vector(11);
+        Vector newVector = new Vector(12);
 
-        newVector.addElement(new Option("\tn del mAnDE (1 o 2, por defecto 1)\n", "N", 1, "-N <int>"));
-        newVector.addElement(new Option("\tRealiza árboles de Chow-Liu en lugar de árboles de decisión\n", "CH", 0, "-CH"));
-        newVector.addElement(new Option("\tUsa árboles REPTree en lugar de J48\n", "REP", 0, "-REP"));
-        newVector.addElement(new Option("\tNO realiza poda de los árboles de decisión\n", "P", 0, "-P"));
-        newVector.addElement(new Option("\tCompleta los mSP1DEs que no hubieran sido creados\n", "C", 0, "-C"));
-        newVector.addElement(new Option("\tRealiza un primer árbol, y con las variables que aparezcan en él, uno para cada una (variosÁrboles)\n", "V", 0, "-V"));
-        newVector.addElement(new Option("\tRealiza un ensemble de árboles de decisión\n", "E", 0, "-E"));
-        newVector.addElement(new Option("\tRealiza el ensemble de árboles de decisión usando Random Forest\n", "RF", 0, "-RF"));
-        newVector.addElement(new Option("\tEstablece el número de instancias usadas para crear cada árbol cuando se usan ensembles (0, 100]\n", "B", 100, "-B <double>"));
-        newVector.addElement(new Option("\tDiscretiza después de realizar el árbol de decisión\n", "D", 0, "-D"));
-        newVector.addElement(new Option("\tDiscretiza en 4 bins las variables que se queden sin discretizar\n", "D4", 0, "-D4"));
-        newVector.addElement(new Option("\tUsa un voto por mayoría en lugar de por suma de probabilidades\n", "M", 0, "-M"));
+        newVector.addElement(new Option("\tn of the mAnDE (1 or 2, default 1)\n", "N", 1, "-N <int>")); 
+        newVector.addElement(new Option("\tRealise Chow-Liu trees instead of decision trees", "CH", 0, "-CH"));
+        newVector.addElement(new Option("\tUse REPTree trees instead of J48 trees", "REP", 0, "-REP"));
+        newVector.addElement(new Option("\tNOT performs pruning of decision trees", "P", 0, "-P"));
+        newVector.addElement(new Option("\tCompletes the mSP1DEs that would not have been created", "C", 0, "-C"));
+        newVector.addElement(new Option("\tCompletes a first tree, and with the variables that appear in it, one for each one (severalTrees)", "V", 0, "-V"));
+        newVector.addElement(new Option("\tRealise an ensemble of decision trees", "E", 0, "-E"));
+        newVector.addElement(new Option("\tRealise the ensemble of decision trees using Random Forest", "RF", 0, "-RF"));
+        newVector.addElement(new Option("\tSet the number of instances used to create each tree when using ensembles (0, 100]\n", "B", 100,"-B <double>"));
+        newVector.addElement(new Option("\tDiscretize after making the decision tree", "D", 0, "-D"));
+        newVector.addElement(new Option("\tDiscretize in 4 bins the variables that remain undiscretized", "D4", 0, "-D4"));
+        newVector.addElement(new Option("\tUse a majority vote instead of sum of probabilities", "M", 0, "-M"));
 
         return newVector.elements();
     }
 
     /**
-     * Convierte una lista de opciones a los hiperparámetros del algoritmo.
+     * Convert a list of options to the hyperparameters of the algorithm.
      *
-     * @param options Opciones a convertir
+     * @param options Options to convert
      * @throws java.lang.Exception
      */
     @Override
@@ -1078,11 +1083,11 @@ public class mAnDE extends AbstractClassifier implements
 
         repTree = Utils.getFlag("REP", options);
 
-        poda = !Utils.getFlag("P", options);
+        pruning = !Utils.getFlag("P", options);
 
-        completa = Utils.getFlag("C", options);
+        complete = Utils.getFlag("C", options);
 
-        variosArboles = Utils.getFlag("V", options);
+        variousTrees = Utils.getFlag("V", options);
 
         ensemble = Utils.getFlag("E", options);
 
@@ -1095,11 +1100,11 @@ public class mAnDE extends AbstractClassifier implements
             bagSize = 100;
         }
 
-        discretizarAntes = !Utils.getFlag("D", options);
+        discretizeBefore = !Utils.getFlag("D", options);
 
-        discretizar4 = Utils.getFlag("D4", options);
+        discretize4 = Utils.getFlag("D4", options);
 
-        mayoria = Utils.getFlag("M", options);
+        majority = Utils.getFlag("M", options);
 
         Utils.checkForRemainingOptions(options);
 
@@ -1125,15 +1130,15 @@ public class mAnDE extends AbstractClassifier implements
             result.add("-REP");
         }
 
-        if (!poda) {
+        if (!pruning) {
             result.add("-P");
         }
 
-        if (completa) {
+        if (complete) {
             result.add("-C");
         }
 
-        if (variosArboles) {
+        if (variousTrees) {
             result.add("-V");
         }
 
@@ -1148,15 +1153,15 @@ public class mAnDE extends AbstractClassifier implements
         result.add("-B");
         result.add("" + bagSize);
 
-        if (!discretizarAntes) {
+        if (!discretizeBefore) {
             result.add("-D");
         }
 
-        if (discretizar4) {
+        if (discretize4) {
             result.add("-D4");
         }
 
-        if (mayoria) {
+        if (majority) {
             result.add("-M");
         }
 
@@ -1164,9 +1169,9 @@ public class mAnDE extends AbstractClassifier implements
     }
 
     /**
-     * Método principal para probar esta clase.
+     * Main method to test this class.
      *
-     * @param args las opciones
+     * @param args options
      */
     public static void main(String[] args) {
         runClassifier(new mAnDE(), args);

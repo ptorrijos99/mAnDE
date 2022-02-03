@@ -13,86 +13,87 @@ import weka.core.Utils;
 public class mSP1DE {
 
     /**
-     * Nombre del Super-Padre del mSP1DE.
+     * Nombre del Super-Parent del mSP1DE.
      */
     private final String xi_s;
 
     /**
-     * ID del Super-Padre del mSP1DE.
+     * ID of the Super-Parent of the mSP1DE.
      */
     private final int xi_i;
 
     /**
-     * Enlace el nombre de los hijos del mSP1DE con su tabla de probabilidad.
+     * Link the name of the children of the mSP1DE with their probability table.
      */
-    private final HashMap<String, double[][][]> hijos;
+    private final HashMap<String, double[][][]> children;
 
     /**
-     * Lista de los hijos del mSP1DE.
+     * List of children of the mSP1DE.
      */
-    private final HashSet<String> listaHijos;
+    private final HashSet<String> listChildren;
 
     /**
-     * Tabla de probabilidad global del mSP1DE.
+     * Global probability table of the mSP1DE.
      */
-    private double[][] probGlobal;
+    private double[][] globalProb;
 
     /**
-     * Constructor. Crea un mSP1DE pasándole como argumento el nombre de la variable xi que va a ser Super-Padre del resto de variables junto a la clase 'y'.
-     *
-     * @param xi Variable padre
+     * Constructor. Build to mSP1DE passing it as argument the name of the variable xi that is going to be Super-Parent of the rest of the variables next to the class 'y'.
+     * 
+     * @param xi Father variable
      */
     public mSP1DE(String xi) {
         this.xi_s = xi;
         this.xi_i = mAnDE.nToI.get(xi);
-        this.listaHijos = new HashSet<>();
-        this.hijos = new HashMap<>();
+        this.listChildren = new HashSet<>();
+        this.children = new HashMap<>();
     }
 
     /**
-     * Crea las tablas de probabilidades para el mSP1DE, tanto la global P(y,Xi) como la condicional de cada variable P(Xj|y,Xi)
+     * Create the probability tables for the mSP1DE, both the global P(y,Xi) and
+     * the conditional for each variable P(Xj|y,Xi).
      */
-    protected void creaTablas() {
-        this.probGlobal = new double[mAnDE.classNumValues] //y
+    protected void buildTables() {
+        this.globalProb = new double[mAnDE.classNumValues] //y
                 [mAnDE.varNumValues[xi_i]]; //Xi
 
-        listaHijos.forEach((hijo) -> {
-            this.hijos.put(hijo, new double[mAnDE.classNumValues] //y
+        listChildren.forEach((child) -> {
+            this.children.put(child, new double[mAnDE.classNumValues] //y
                     [mAnDE.varNumValues[xi_i]] //Xi
-                    [mAnDE.varNumValues[mAnDE.nToI.get(hijo)]]); //Xj
+                    [mAnDE.varNumValues[mAnDE.nToI.get(child)]]); //Xj
         });
 
-        // Creación de las tablas de contingencia
+        // Creation of the contigency tables
         for (int i = 0; i < mAnDE.numInstances; i++) {
             Instance inst = mAnDE.data.get(i);
 
             // Creación de la tabla de probabilidad P(y,Xi)
-            probGlobal[(int) inst.value(mAnDE.y)][(int) inst.value(xi_i)] += 1;
+            globalProb[(int) inst.value(mAnDE.y)][(int) inst.value(xi_i)] += 1;
 
-            // Creación de la tabla de probabilidad P(Xj|y,Xi)
-            hijos.forEach((String xj, double[][][] tablaXj) -> {
+            // Creation of the probability table P(y,Xi)
+            children.forEach((String xj, double[][][] tablaXj) -> {
                 int xj_i = mAnDE.nToI.get(xj);
                 tablaXj[(int) inst.value(mAnDE.y)][(int) inst.value(xi_i)][(int) inst.value(xj_i)] += 1;
             });
         }
 
-        // Conversión a Distribución de Probabilidad Conjunta
-        for (double[] probGlobal_y : probGlobal) {
-            for (int j = 0; j < probGlobal_y.length; j++) {
-                probGlobal_y[j] /= mAnDE.numInstances;
+        // Conversion to Joint Probability Distribution
+        for (double[] globalProb_y : globalProb) {
+            for (int j = 0; j < globalProb_y.length; j++) {
+                globalProb_y[j] /= mAnDE.numInstances;
             }
         }
 
-        // Conversión a Distribución de Probabilidad Condicional
-        hijos.forEach((String xj, double[][][] tablaXj) -> {
+        // Conversion to Conditional Probability Distribution
+        children.forEach((String xj, double[][][] tableXj) -> {
             int xj_i = mAnDE.nToI.get(xj);
-            double suma;
-            for (double[][] tablaXj_y : tablaXj) {
-                for (double[] tablaXj_y_xi : tablaXj_y) {
-                    suma = Utils.sum(tablaXj_y_xi);
-                    if (suma != 0) {
-                        for (int k = 0; k < tablaXj_y_xi.length; k++) {
-                            tablaXj_y_xi[k] /= suma;
+            double sum;
+            for (double[][] tableXj_y : tableXj) {
+                for (double[] tableXj_y_xi : tableXj_y) {
+                    sum = Utils.sum(tableXj_y_xi);
+                    if (sum != 0) {
+                        for (int k = 0; k < tableXj_y_xi.length; k++) {
+                            tableXj_y_xi[k] /= sum;
                         }
                     }
                 }
@@ -101,34 +102,34 @@ public class mSP1DE {
     }
 
     /**
-     * Calcula las probabilidades para cada valor de la clase dada una instancia. Para ello, se aplica la fórmula: P(y,Xi) * (\prod_{i=1}^{Nhijos} P(Xj|y,Xi)), siendo Xi la variable padre en el mSP1DE, y Xj cada una de las variables hijas.
+     * Calculates the probabilities for each value of the class given an instance. To do this, the formula is applied: P(y,Xi) * (\prod_{i=1}^{Children} P(Xj|y,Xi)), with Xi being the parent variable in the mSP1DE, and Xj each of the child variables.
      *
-     * @param inst Instancia sobre la que calcular la clase.
-     * @return Probabilidades para cada valor de la clase plara la instancia dada.
+     * @param inst Instance on which to compute the class.
+     * @return Probabilities for each value of the class for the given instance.
      */
-    protected double[] probabilidadesParaInstancia(Instance inst) {
+    protected double[] probsForInstance(Instance inst) {
         double[] res = new double[mAnDE.classNumValues];
         double xi = inst.value(xi_i);
 
-        // Inicializamos la probabilidad de cada valor de la clase a P(y,xi)
+        // We initialise the probability of each class value to P(y,xi).
         for (int i = 0; i < res.length; i++) {
-            res[i] = probGlobal[i][(int) xi];
+            res[i] = globalProb[i][(int) xi];
         }
 
-        /* Para cada hijo Xj, multiplicamos P(Xj|y,Xi) por el resultado 
-         * acumulado para cada uno de los valores de la clase
-         */
-        hijos.forEach((String xj_s, double[][][] tablaXj) -> {
+        /* For each child Xj, we multiply P(Xj|y,Xi) by the result 
+         * accumulated for each of the values of the class
+        */
+        children.forEach((String xj_s, double[][][] tablaXj) -> {
             for (int i = 0; i < res.length; i++) {
                 res[i] *= tablaXj[i][(int) xi][(int) inst.value(mAnDE.nToI.get(xj_s))];
             }
         });
 
-        // Normalizamos los valores dividiéndolos entre la suma de todos ellos
-        double suma = Utils.sum(res);
-        if (suma != 0) {
+        // We normalise the values by dividing them by the sum of all the values.
+        double sum = Utils.sum(res);
+        if (sum != 0) {
             for (int i = 0; i < res.length; i++) {
-                res[i] /= suma;
+                res[i] /= sum;
             }
         }
 
@@ -136,27 +137,29 @@ public class mSP1DE {
     }
 
     /**
-     * Añade una variable como hijo en el mSP1DE.
+     * Add a variable as a child in the mSP1DE.
      *
-     * @param hijo Nombre de la variable a añadir como hijo.
+     * @param child Name of the variable to be added as a child.
      */
-    protected void masHijos(String hijo) {
-        if (!hijo.equals("")) {
-            listaHijos.add(hijo);
+    protected void moreChildren(String child) {
+        if (!child.equals("")) {
+            listChildren.add(child);
         }
     }
 
     /**
-     * Devuelve el número de hijos del mSP1DE.
+     * Returns the number of children of mSP1DE.
+     * 
+     * @return The number of children
      */
-    protected int getNHijos() {
-        return hijos.size();
+    protected int getNChildren() {
+        return children.size();
     }
 
     /**
      *
-     * @param o Objeto a comparar.
-     * @return True si los objetos son iguales y False si no lo son.
+     * @param o Object to compare.
+     * @return True if the objects are equal and False if they are not.
      */
     @Override
     public boolean equals(Object o) {
