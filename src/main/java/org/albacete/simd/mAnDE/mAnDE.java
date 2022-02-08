@@ -32,6 +32,7 @@ import weka.core.Utils;
 import static weka.classifiers.AbstractClassifier.runClassifier;
 import weka.classifiers.bayes.BayesNet;
 import weka.core.Option;
+import weka.filters.unsupervised.attribute.Discretize;
 
 public class mAnDE extends AbstractClassifier implements
         OptionHandler {
@@ -405,7 +406,7 @@ public class mAnDE extends AbstractClassifier implements
                 Classifier[] trees;
 
                 J48 j48 = new J48();
-                Bagging bagging;
+                Bagging2 bagging;
                 REPTree repT = new REPTree();
 
                 // We define whether we want pruning or not.
@@ -421,11 +422,11 @@ public class mAnDE extends AbstractClassifier implements
                 if (ensemble) {
                     if (randomForest) {
                         System.out.println("Run Random Forest");
-                        RandomForest rf = new RandomForest();
+                        RandomForest2 rf = new RandomForest2();
                         // Set the number of parallel wires to 0 (automatic)
                         rf.setOptions(options);
                         rf.setNumIterations(10);
-                        rf.setBagSizePercent(bagSize);
+                        rf.setBagSizePercentDouble(bagSize);
                         rf.buildClassifier(data);
                         trees = rf.getClassifiers();
                         for (Classifier tree : trees) {
@@ -433,7 +434,7 @@ public class mAnDE extends AbstractClassifier implements
                         }
                     } else {
                         System.out.println("Ejecute Bagging");
-                        bagging = new Bagging();
+                        bagging = new Bagging2();
                         if (repTree) {
                             bagging.setClassifier(repT);
                         } else {
@@ -442,7 +443,7 @@ public class mAnDE extends AbstractClassifier implements
                         // Set the number of parallel wires to 0 (automatic)
                         bagging.setOptions(options);
                         bagging.setNumIterations(10);
-                        bagging.setBagSizePercent(bagSize);
+                        bagging.setBagSizePercentDouble(bagSize);
                         bagging.buildClassifier(data);
                         trees = bagging.getClassifiers();
                         for (Classifier tree : trees) {

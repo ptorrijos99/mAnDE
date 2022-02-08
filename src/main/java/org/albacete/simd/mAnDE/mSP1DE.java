@@ -67,7 +67,7 @@ public class mSP1DE {
         for (int i = 0; i < mAnDE.numInstances; i++) {
             Instance inst = mAnDE.data.get(i);
 
-            // Creación de la tabla de probabilidad P(y,Xi)
+            // Creation of the probability table P(y,Xi)
             globalProb[(int) inst.value(mAnDE.y)][(int) inst.value(xi_i)] += 1;
 
             // Creation of the probability table P(y,Xi)
