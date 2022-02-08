@@ -182,7 +182,8 @@ public class mSP1DE {
     @Override
     public int hashCode() {
         int hash = 3;
-        hash = 47 * hash + Objects.hashCode(this.xi_i);
+        hash = 47 * hash + Objects.hashCode(this.xi_s);
+        hash = 47 * hash + this.xi_i;
         return hash;
     }
 }

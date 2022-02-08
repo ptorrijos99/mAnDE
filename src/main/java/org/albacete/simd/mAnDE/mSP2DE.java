@@ -220,10 +220,8 @@ public class mSP2DE {
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 19 * hash + Objects.hashCode(this.xi1_s);
-        hash = 19 * hash + this.xi1_i;
-        hash = 19 * hash + Objects.hashCode(this.xi2_s);
-        hash = 19 * hash + this.xi2_i;
+        hash = 19 * hash + Objects.hashCode(this.xi1_s) + Objects.hashCode(this.xi2_s);
+        hash = 19 * hash + this.xi1_i + this.xi2_i;
         return hash;
     }
 
