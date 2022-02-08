@@ -11,7 +11,7 @@ import weka.core.Utils;
  *
  * @author Pablo Torrijos Arenas
  */
-public class mSP2DE {
+public class mSP2DE implements mSPnDE {
 
     /**
      * Name of the first Super-Parent of the mSP2DE.
@@ -66,7 +66,8 @@ public class mSP2DE {
     /**
      * Create the probability tables for the mSP2DE, both the global P(y,Xi) and the conditional for each variable P(Xj|y,Xi).
      */
-    protected void buildTables() {
+    @Override
+    public void buildTables() {
         this.globalProbs = new double[mAnDE.classNumValues] //y
                 [mAnDE.varNumValues[xi1_i]] //Xi1
                 [mAnDE.varNumValues[xi2_i]];    //Xi2
@@ -103,7 +104,6 @@ public class mSP2DE {
 
         // Conversion to Conditional Probability Distribution
         children.forEach((String xj, double[][][][] tableXj) -> {
-            int xj_i = mAnDE.nToI.get(xj);
             double sum;
             for (double[][][] tableXj_y : tableXj) {
                 for (double[][] tableXj_y_xi1 : tableXj_y) {
@@ -126,7 +126,8 @@ public class mSP2DE {
      * @param inst Instance on which to calculate the class.
      * @return Probabilities for each value of the class for the given instance.
      */
-    protected double[] probsForInstance(Instance inst) {
+    @Override
+    public double[] probsForInstance(Instance inst) {
         double[] res = new double[mAnDE.classNumValues];
         double xi1 = inst.value(xi1_i);
         double xi2 = inst.value(xi2_i);
@@ -161,7 +162,8 @@ public class mSP2DE {
      *
      * @param child Name of the variable to add as a child.
      */
-    protected void moreChildren(String child) {
+    @Override
+    public void moreChildren(String child) {
         if (!child.equals("")) {
             listChildren.add(child);
         }
@@ -172,7 +174,8 @@ public class mSP2DE {
      *
      * @param children Name of the variables to be added as children.
      */
-    protected void moreChildren(ArrayList<String> children) {
+    @Override
+    public void moreChildren(ArrayList<String> children) {
         children.forEach((child) -> {
             if (!child.equals("")) {
                 listChildren.add(child);
@@ -180,11 +183,12 @@ public class mSP2DE {
         });
     }
 
-     /**
+    /**
      * Returns the number of children of the mSP2DE.
      * @return The number of children of the mSP2DE.
      */
-    protected int getNChildren() {
+    @Override
+    public int getNChildren() {
         return children.size();
     }
 

@@ -1,5 +1,6 @@
 package org.albacete.simd.mAnDE;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Objects;
@@ -10,7 +11,7 @@ import weka.core.Utils;
  *
  * @author Pablo Torrijos Arenas
  */
-public class mSP1DE {
+public class mSP1DE implements mSPnDE {
 
     /**
      * Nombre del Super-Parent del mSP1DE.
@@ -53,7 +54,8 @@ public class mSP1DE {
      * Create the probability tables for the mSP1DE, both the global P(y,Xi) and
      * the conditional for each variable P(Xj|y,Xi).
      */
-    protected void buildTables() {
+    @Override
+    public void buildTables() {
         this.globalProb = new double[mAnDE.classNumValues] //y
                 [mAnDE.varNumValues[xi_i]]; //Xi
 
@@ -86,7 +88,6 @@ public class mSP1DE {
 
         // Conversion to Conditional Probability Distribution
         children.forEach((String xj, double[][][] tableXj) -> {
-            int xj_i = mAnDE.nToI.get(xj);
             double sum;
             for (double[][] tableXj_y : tableXj) {
                 for (double[] tableXj_y_xi : tableXj_y) {
@@ -107,7 +108,8 @@ public class mSP1DE {
      * @param inst Instance on which to compute the class.
      * @return Probabilities for each value of the class for the given instance.
      */
-    protected double[] probsForInstance(Instance inst) {
+    @Override
+    public double[] probsForInstance(Instance inst) {
         double[] res = new double[mAnDE.classNumValues];
         double xi = inst.value(xi_i);
 
@@ -141,10 +143,25 @@ public class mSP1DE {
      *
      * @param child Name of the variable to be added as a child.
      */
-    protected void moreChildren(String child) {
+    @Override
+    public void moreChildren(String child) {
         if (!child.equals("")) {
             listChildren.add(child);
         }
+    }
+    
+    /**
+     * Add several variables as children in the mSP2DE.
+     *
+     * @param children Name of the variables to be added as children.
+     */
+    @Override
+    public void moreChildren(ArrayList<String> children) {
+        children.forEach((child) -> {
+            if (!child.equals("")) {
+                listChildren.add(child);
+            }
+        });
     }
 
     /**
@@ -152,7 +169,8 @@ public class mSP1DE {
      * 
      * @return The number of children
      */
-    protected int getNChildren() {
+    @Override
+    public int getNChildren() {
         return children.size();
     }
 
