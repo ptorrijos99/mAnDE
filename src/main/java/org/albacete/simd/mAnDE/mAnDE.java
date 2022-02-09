@@ -159,34 +159,42 @@ public class mAnDE extends AbstractClassifier implements
 
         // If we have not created mSPnDE's
         if (mSPnDEs.isEmpty()) {
-            boolean starts1 = false;
-            if (!isEnsemble()) {
-                starts1 = true;
-            }
+            boolean starts1 = !isEnsemble();
+
             while (true) {
+                // When we have tried everything and can't run, we run Naive Bayes
                 if (!isEnsemble() && !starts1) {
-                    // If we cannot execute at all, we run Naive Bayes.
                     System.out.println("CAN'T RUN. WE RUN NAIVE BAYES.");
                     modeNB = true;
                     nb = new NaiveBayes();
                     nb.buildClassifier(data);
                     break;
                 }
+                // If the user specifies not to use assemblies and it does not 
+                // work, we activate them with Random Forest
                 if (!isEnsemble()) {
                     setEnsemble(true);
                     setRandomForest(true);
-                } else if (isEnsemble()) {
+                } else {
+                    // If don´t works, we multiply bagSize by 5
                     bagSize *= 5;
+
+                    // If we have a bag size bigger than 100
                     if (getBagSize() > 100) {
+
+                        // If we have already tried Random Forest, use Bagging
                         if (isRandomForest()) {
                             setRandomForest(false);
                             bagSize = 100;
-                        } else {
+                        } // If we have already tried also Bagging, try J48
+                        else {
                             setEnsemble(false);
                             starts1 = false;
                         }
                     }
                 }
+
+                // Try to build the mSPnDEs with the new hiperparameters
                 try {
                     build_mSPnDEs();
                 } catch (Exception ex) {
@@ -288,35 +296,28 @@ public class mAnDE extends AbstractClassifier implements
 
         if (ensemble) {
             if (randomForest) {
-                System.out.println("Run Random Forest");
-                RandomForest2 rf = new RandomForest2();
-                // Set the number of parallel wires to 0 (automatic)
-                rf.setOptions(options);
-                rf.setNumIterations(10);
-                rf.setBagSizePercentDouble(bagSize);
-                rf.buildClassifier(data);
-                trees = rf.getClassifiers();
-                for (Classifier tree : trees) {
-                    graphToSPnDE(treeParser(tree));
-                }
+                // Create a Random Forest
+                bagging = new RandomForest2();
             } else {
-                System.out.println("Ejecute Bagging");
                 bagging = new Bagging2();
                 if (repTree) {
                     bagging.setClassifier(repT);
                 } else {
                     bagging.setClassifier(j48);
                 }
-                // Set the number of parallel wires to 0 (automatic)
-                bagging.setOptions(options);
-                bagging.setNumIterations(10);
-                bagging.setBagSizePercentDouble(bagSize);
-                bagging.buildClassifier(data);
-                trees = bagging.getClassifiers();
-                for (Classifier tree : trees) {
-                    graphToSPnDE(treeParser(tree));
-                }
             }
+            // Set the number of parallel wires to 0 (automatic)
+            bagging.setOptions(options);
+            bagging.setNumIterations(10);
+            bagging.setBagSizePercentDouble(bagSize);
+            bagging.buildClassifier(data);
+            trees = bagging.getClassifiers();
+
+            // Parse trees to SPnDEs
+            for (Classifier tree : trees) {
+                graphToSPnDE(treeParser(tree));
+            }
+
         } else {
             if (repTree) {
                 repT.buildClassifier(data);
@@ -396,8 +397,7 @@ public class mAnDE extends AbstractClassifier implements
                         nodes.put(id2, new Node(id2, nodes.get(id1)));
                     }
                     nodes.get(id1).addChild(nodes.get(id2));
-                } 
-                //N0 [label="petallength" ]                J48
+                } //N0 [label="petallength" ]                J48
                 //N58640b4a [label="1: petalwidth"]        RandomTree and REPTree
                 else if (!lines[i].contains(" (")) {
                     if (lines[i].contains("\" ]")) {
