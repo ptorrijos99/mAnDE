@@ -20,7 +20,7 @@
  *    Algorithm developed by: Geoff Webb
  *    Code written by: Nayyar Zaidi and Janice Boughton
  */
-package org.albacete.simd.weka.classifiers.bayes.AveragedNDependenceEstimators;
+package weka.classifiers.bayes.AveragedNDependenceEstimators;
 
 import java.util.Enumeration;
 import java.util.Vector;

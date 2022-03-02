@@ -21,7 +21,7 @@
  *    Code written by: Janice Boughton & Zhihai Wang & Nayyar Zaidi
  */
 
-package org.albacete.simd.weka.classifiers.bayes.AveragedNDependenceEstimators;
+package weka.classifiers.bayes.AveragedNDependenceEstimators;
 
 import weka.classifiers.AbstractClassifier;
 import weka.core.Capabilities;

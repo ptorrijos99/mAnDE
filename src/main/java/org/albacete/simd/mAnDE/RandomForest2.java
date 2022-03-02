@@ -15,7 +15,7 @@
 
  /*
  *    RandomForest2.java
- *    Copyright (C) 2001-2012 University of Waikato, Hamilton, New Zealand
+ *    Copyright (C) 1999-2012 University of Waikato, Hamilton, New Zealand
  *
  */
 /**
@@ -24,10 +24,72 @@
  */
 package org.albacete.simd.mAnDE;
 
-/**
- * We extend Bagging2 to be able to use the double values of 
- * m_BagSizePercentDouble and the new getClassifiers() method.
- */
-public class RandomForest2 extends Bagging2 {
+import weka.classifiers.Classifier;
+import weka.classifiers.trees.RandomForest;
+import weka.core.Debug;
+import weka.core.Instances;
 
+
+public class RandomForest2 extends RandomForest {
+    
+    /**
+     * The size of each bag sample, as a percentage of the training size
+     *
+     * Changued from int to double
+     */
+    protected double m_BagSizePercentDouble = 100;
+
+    /**
+     * Returns a training set for a particular iteration.
+     *
+     * Changued to use the variable m_BagSizePercentDouble instead of
+     * m_BagSizePercent
+     *
+     * @param iteration the number of the iteration for the requested training
+     * set.
+     * @return the training set for the supplied iteration number
+     * @throws Exception if something goes wrong when generating a training set.
+     */
+    @Override
+    protected synchronized Instances getTrainingSet(int iteration) throws Exception {
+
+        Debug.Random r = new Debug.Random(m_Seed + iteration);
+
+        // create the in-bag indicator array if necessary
+        if (m_CalcOutOfBag) {
+            m_inBag[iteration] = new boolean[m_data.numInstances()];
+            return m_data.resampleWithWeights(r, m_inBag[iteration], getRepresentCopiesUsingWeights(), m_BagSizePercentDouble);
+        } else {
+            return m_data.resampleWithWeights(r, null, getRepresentCopiesUsingWeights(), m_BagSizePercentDouble);
+        }
+    }
+
+    /**
+     * Sets the size of each bag, as a percentage of the training set size.
+     *
+     * @param newBagSizePercentDouble the bag size, as a percentage.
+     */
+    public void setBagSizePercentDouble(double newBagSizePercentDouble) {
+
+        m_BagSizePercentDouble = newBagSizePercentDouble;
+    }
+
+    /**
+     * Gets the size of each bag, as a percentage of the training set size.
+     *
+     * @return the bag size, as a percentage.
+     */
+    public double getBagSizePercentDouble() {
+
+        return m_BagSizePercentDouble;
+    }
+
+    /**
+     * Gets all of the classifiers of the ensemble.
+     *
+     * @return an array with the classifiers of the ensemble.
+     */
+    public Classifier[] getClassifiers() {
+        return m_Classifiers;
+    }
 }

@@ -29,6 +29,7 @@ import weka.core.Instances;
 import weka.core.OptionHandler;
 import weka.core.Utils;
 import static weka.classifiers.AbstractClassifier.runClassifier;
+import weka.classifiers.meta.AdaBoostM1;
 import weka.core.Option;
 
 public class mAnDE extends AbstractClassifier implements
@@ -110,6 +111,11 @@ public class mAnDE extends AbstractClassifier implements
      * Runs a set of decision trees instead of a single tree.
      */
     private boolean ensemble = false;
+    
+    /**
+     * Runs a AdaBoost instead of a Bagging or Random Forest.
+     */
+    private boolean boosting = false;
 
     /**
      * Runs a Random Forest instead of Bagging.
@@ -159,6 +165,7 @@ public class mAnDE extends AbstractClassifier implements
 
         // If we have not created mSPnDE's
         if (mSPnDEs.isEmpty()) {
+            System.out.println("VACIOoooooooo");
             boolean starts1 = !isEnsemble();
 
             while (true) {
@@ -225,7 +232,7 @@ public class mAnDE extends AbstractClassifier implements
         // We free up the discretised data space
         data.delete();
 
-        nSPnDEs_variables();
+        //nSPnDEs_variables();
     }
 
     /**
@@ -280,8 +287,7 @@ public class mAnDE extends AbstractClassifier implements
 
         Classifier[] trees;
 
-        J48 j48 = new J48();
-        Bagging2 bagging;
+        J48 j48 = new J48();        
         REPTree repT = new REPTree();
 
         // We define whether we want pruning or not.
@@ -295,27 +301,53 @@ public class mAnDE extends AbstractClassifier implements
         options[1] = "0";
 
         if (ensemble) {
-            if (randomForest) {
-                // Create a Random Forest
-                bagging = new RandomForest2();
-            } else {
-                bagging = new Bagging2();
-                if (repTree) {
-                    bagging.setClassifier(repT);
-                } else {
-                    bagging.setClassifier(j48);
+            if (boosting) {
+                AdaBoostM1_2 adaBoost = new AdaBoostM1_2();
+                adaBoost.setClassifier(j48);
+                adaBoost.setNumIterations(10);
+                adaBoost.buildClassifier(data);
+                trees = adaBoost.getClassifiers();
+                
+                // Parse trees to SPnDEs
+                for (Classifier tree : trees) {
+                    graphToSPnDE(treeParser(tree));
                 }
-            }
-            // Set the number of parallel wires to 0 (automatic)
-            bagging.setOptions(options);
-            bagging.setNumIterations(10);
-            bagging.setBagSizePercentDouble(bagSize);
-            bagging.buildClassifier(data);
-            trees = bagging.getClassifiers();
+            } else {
+                if (randomForest) {
+                    // Create a Random Forest
+                    RandomForest2 rf = new RandomForest2();
+                    
+                    // Set the number of parallel wires to 0 (automatic)
+                    rf.setOptions(options);
+                    rf.setNumIterations(10);
+                    rf.setBagSizePercentDouble(bagSize);
+                    rf.buildClassifier(data);
+                    trees = rf.getClassifiers();
 
-            // Parse trees to SPnDEs
-            for (Classifier tree : trees) {
-                graphToSPnDE(treeParser(tree));
+                    // Parse trees to SPnDEs
+                    for (Classifier tree : trees) {
+                        graphToSPnDE(treeParser(tree));
+                    }
+                } else {
+                    Bagging2 bagging = new Bagging2();
+                    if (repTree) {
+                        bagging.setClassifier(repT);
+                    } else {
+                        bagging.setClassifier(j48);
+                    }
+                    
+                    // Set the number of parallel wires to 0 (automatic)
+                    bagging.setOptions(options);
+                    bagging.setNumIterations(10);
+                    bagging.setBagSizePercentDouble(bagSize);
+                    bagging.buildClassifier(data);
+                    trees = bagging.getClassifiers();
+
+                    // Parse trees to SPnDEs
+                    for (Classifier tree : trees) {
+                        graphToSPnDE(treeParser(tree));
+                    }
+                }          
             }
 
         } else {
@@ -455,7 +487,6 @@ public class mAnDE extends AbstractClassifier implements
                 });
             });
         }
-
     }
 
     /**
@@ -519,22 +550,10 @@ public class mAnDE extends AbstractClassifier implements
     private void calculateTables_mSPnDEs() {
         List<mSPnDE> list = new ArrayList<>(mSPnDEs.values());
 
-        //Create the thread pool, one for each mSPnDEs
-        ExecutorService executor = Executors.newFixedThreadPool(mSPnDEs.size());
-
         //Calls the mSPnDE function that creates the table for each mSPnDE
         list.forEach((spode) -> {
-            executor.execute(() -> {
-                spode.buildTables();
-            });
+            spode.buildTables();
         });
-
-        //Stop supporting calls 
-        try {
-            //Wait until they are all finished
-            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-        } catch (InterruptedException ex) {
-        }
     }
 
     /**
@@ -608,6 +627,13 @@ public class mAnDE extends AbstractClassifier implements
     public void setEnsemble(boolean ensemble) {
         this.ensemble = ensemble;
     }
+    
+    /**
+     * @param boosting The boosting to be set
+     */
+    public void setBoosting(boolean boosting) {
+        this.boosting = boosting;
+    }
 
     /**
      * @param randomForest The randomForest to be set
@@ -635,6 +661,13 @@ public class mAnDE extends AbstractClassifier implements
      */
     public boolean isEnsemble() {
         return ensemble;
+    }
+    
+    /**
+     * @return The boosting
+     */
+    public boolean isBoosting() {
+        return boosting;
     }
 
     /**
