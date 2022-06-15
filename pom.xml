@@ -30,24 +30,43 @@
     </dependency>
     
     
-    <!--Poi para poder crear ficheros Excel-->
-
-    <dependency>
-      <groupId>org.apache.poi</groupId>
-      <artifactId>poi</artifactId>
-      <version>4.1.2</version>
-      <type>jar</type>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.apache.poi</groupId>
-      <artifactId>poi-ooxml</artifactId>
-      <version>4.1.2</version>
-      <type>jar</type>
-    </dependency>
-
-
-
   </dependencies>
+  
+  <build>
+	  <plugins>
+	    <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <executions>
+            <execution>
+              <phase>package</phase>
+              <goals>
+                <goal>single</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <archive>
+              <manifest>
+              	<addClasspath>true</addClasspath>
+                <mainClass>org.albacete.simd.experiments.singleExperiment</mainClass>
+              </manifest>
+            </archive>
+            <descriptorRefs>
+	        <descriptorRef>jar-with-dependencies</descriptorRef>
+	      </descriptorRefs>
+          </configuration>
+        </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>8</source>
+          <target>8</target>
+        </configuration>
+      </plugin>
+
+	  </plugins>
+   </build>
 
 </project>

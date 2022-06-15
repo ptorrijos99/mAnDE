@@ -60,7 +60,7 @@ public class Bagging2 extends Bagging {
     protected synchronized Instances getTrainingSet(int iteration) throws Exception {
 
         Random r = new Random(m_Seed + iteration);
-
+        
         // create the in-bag indicator array if necessary
         if (m_CalcOutOfBag) {
             m_inBag[iteration] = new boolean[m_data.numInstances()];

@@ -21,14 +21,13 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-
 /**
  *    mAnDE.java
  *    Copyright (C) 2022 Universidad de Castilla-La Mancha, España
- *    @author Pablo Torrijos Arenas
+ *
+ * @author Pablo Torrijos Arenas
  *
  */
-
 package org.albacete.simd.mAnDE;
 
 import java.io.File;
@@ -38,8 +37,10 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;
@@ -77,7 +78,7 @@ public class mAnDE extends AbstractClassifier implements
     /**
      * HashMap containing the mSPnDEs.
      */
-    private HashMap<Integer, mSPnDE> mSPnDEs;
+    private ConcurrentHashMap<Integer, mSPnDE> mSPnDEs;
 
     /**
      * HashMap to convert from variable name to index.
@@ -134,7 +135,7 @@ public class mAnDE extends AbstractClassifier implements
      * Runs a set of decision trees instead of a single tree.
      */
     private boolean ensemble = false;
-    
+
     /**
      * Runs a AdaBoost instead of a Bagging or Random Forest.
      */
@@ -185,7 +186,7 @@ public class mAnDE extends AbstractClassifier implements
             build_mSPnDEs();
         } catch (Exception ex) {
         }
-
+        
         // If we have not created mSPnDE's
         if (mSPnDEs.isEmpty()) {
             boolean starts1 = !isEnsemble();
@@ -199,26 +200,33 @@ public class mAnDE extends AbstractClassifier implements
                     nb.buildClassifier(data);
                     break;
                 }
-                // If the user specifies not to use assemblies and it does not 
-                // work, we activate them with Random Forest
+                // If the user specifies not to use ensembles and it does not 
+                // work, we activate them with Boosting
                 if (!isEnsemble()) {
                     setEnsemble(true);
-                    setRandomForest(true);
+                    setBoosting(true);
                 } else {
-                    // If don´t works, we multiply bagSize by 5
-                    bagSize *= 5;
-
-                    // If we have a bag size bigger than 100
-                    if (getBagSize() > 100) {
-
-                        // If we have already tried Random Forest, use Bagging
-                        if (isRandomForest()) {
-                            setRandomForest(false);
+                    // If we have already tried Boosting, disable and activate RF
+                    if (isBoosting()) {
+                        setBoosting(false);
+                        setRandomForest(true);
+                    } else {
+                        // If don´t works, we multiply bagSize by 5
+                        if (bagSize != 0)
+                            bagSize *= 5;
+                        else bagSize = 100;
+                        
+                        // If we have a bag size bigger than 100
+                        if (bagSize > 100) {
                             bagSize = 100;
-                        } // If we have already tried also Bagging, try J48
-                        else {
-                            setEnsemble(false);
-                            starts1 = false;
+                            // If we have already tried Random Forest, use Bagging
+                            if (isRandomForest()) {
+                                setRandomForest(false);
+                            } // If we have already tried also Bagging, do Naive Bayes
+                            else {
+                                starts1 = false;
+                                setEnsemble(false);
+                            }
                         }
                     }
                 }
@@ -276,9 +284,10 @@ public class mAnDE extends AbstractClassifier implements
         if (modeNB) {
             return nb.distributionForInstance(instance_d);
         }
-
+        
         // Add up all the probabilities of the mSPnDEs
-        mSPnDEs.forEach((id, spode) -> {
+        //mSPnDEs.forEach((id, spode) -> {
+        mSPnDEs.values().parallelStream().forEach((spode) -> {
             double[] temp = spode.probsForInstance(instance_d);
 
             for (int i = 0; i < res.length; i++) {
@@ -305,11 +314,12 @@ public class mAnDE extends AbstractClassifier implements
      * Create the necessary mSPnDE's, by running the trees set in the options...
      */
     private void build_mSPnDEs() throws Exception {
-        mSPnDEs = new HashMap<>();
+        mSPnDEs = new ConcurrentHashMap<>();
 
-        Classifier[] trees;
+        //Classifier[] trees;
+        List<Classifier> trees;
 
-        J48 j48 = new J48();        
+        J48 j48 = new J48();
         REPTree repT = new REPTree();
 
         // We define whether we want pruning or not.
@@ -328,28 +338,20 @@ public class mAnDE extends AbstractClassifier implements
                 adaBoost.setClassifier(j48);
                 adaBoost.setNumIterations(10);
                 adaBoost.buildClassifier(data);
-                trees = adaBoost.getClassifiers();
-                
-                // Parse trees to SPnDEs
-                for (Classifier tree : trees) {
-                    graphToSPnDE(treeParser(tree));
-                }
+                trees = Arrays.asList(adaBoost.getClassifiers());
+
             } else {
                 if (randomForest) {
                     // Create a Random Forest
                     RandomForest2 rf = new RandomForest2();
-                    
+
                     // Set the number of parallel wires to 0 (automatic)
                     rf.setOptions(options);
                     rf.setNumIterations(10);
                     rf.setBagSizePercentDouble(bagSize);
                     rf.buildClassifier(data);
-                    trees = rf.getClassifiers();
+                    trees = Arrays.asList(rf.getClassifiers());
 
-                    // Parse trees to SPnDEs
-                    for (Classifier tree : trees) {
-                        graphToSPnDE(treeParser(tree));
-                    }
                 } else {
                     Bagging2 bagging = new Bagging2();
                     if (repTree) {
@@ -357,21 +359,21 @@ public class mAnDE extends AbstractClassifier implements
                     } else {
                         bagging.setClassifier(j48);
                     }
-                    
+
                     // Set the number of parallel wires to 0 (automatic)
                     bagging.setOptions(options);
                     bagging.setNumIterations(10);
                     bagging.setBagSizePercentDouble(bagSize);
                     bagging.buildClassifier(data);
-                    trees = bagging.getClassifiers();
-
-                    // Parse trees to SPnDEs
-                    for (Classifier tree : trees) {
-                        graphToSPnDE(treeParser(tree));
-                    }
-                }          
+                    trees = Arrays.asList(bagging.getClassifiers());
+                }
             }
-
+            
+            // Parse trees to SPnDEs
+            trees.parallelStream().forEach((tree) -> {
+                graphToSPnDE(treeParser(tree));
+            });
+                
         } else {
             if (repTree) {
                 repT.buildClassifier(data);
@@ -504,7 +506,7 @@ public class mAnDE extends AbstractClassifier implements
                 node.getChildren().values().forEach((child) -> {
                     if (!node.getName().equals("") && !child.getName().equals("")) {
                         toSP2DE(node.getName(), child.getName(), node.getParent().getName(),
-                                node.getChildrenArray(child.getName()), child.getChildrenArray());
+                            node.getChildrenArray(child.getName()), child.getChildrenArray());
                     }
                 });
             });
@@ -571,11 +573,12 @@ public class mAnDE extends AbstractClassifier implements
      */
     private void calculateTables_mSPnDEs() {
         List<mSPnDE> list = new ArrayList<>(mSPnDEs.values());
-
+        
         //Calls the mSPnDE function that creates the table for each mSPnDE
-        list.forEach((spode) -> {
+        list.parallelStream().forEach((spode) -> {
             spode.buildTables();
         });
+        
     }
 
     /**
@@ -649,7 +652,7 @@ public class mAnDE extends AbstractClassifier implements
     public void setEnsemble(boolean ensemble) {
         this.ensemble = ensemble;
     }
-    
+
     /**
      * @param boosting The boosting to be set
      */
@@ -684,7 +687,7 @@ public class mAnDE extends AbstractClassifier implements
     public boolean isEnsemble() {
         return ensemble;
     }
-    
+
     /**
      * @return The boosting
      */
