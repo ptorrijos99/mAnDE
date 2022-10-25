@@ -31,6 +31,7 @@
 
 package org.albacete.simd.mAnDE;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,7 +39,7 @@ import java.util.Objects;
 import weka.core.Instance;
 import weka.core.Utils;
 
-public class mSP2DE implements mSPnDE {
+public class mSP2DE implements mSPnDE, Serializable {
 
     /**
      * Name of the first Super-Parent of the mSP2DE.

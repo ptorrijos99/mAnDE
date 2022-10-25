@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
@@ -41,6 +42,8 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;
@@ -57,7 +60,7 @@ import static weka.classifiers.AbstractClassifier.runClassifier;
 import weka.core.Option;
 
 public class mAnDE extends AbstractClassifier implements
-        OptionHandler {
+        OptionHandler, Serializable {
 
     /**
      * For serialisation.
@@ -150,11 +153,21 @@ public class mAnDE extends AbstractClassifier implements
      * Percentage of instances to be used to make each tree in the assembly.
      */
     private double bagSize = 100;
+    
+    /**
+     * Number of trees that the algorithm make in the structural learning.
+     */
+    private int nTrees = 10;
 
     /**
      * n of the mAnDE.
      */
     private int n = 1;
+    
+    /**
+     * Minimum number of Instances to create a tree.
+     */
+    private int minimumInstances = 3;
 
     /**
      * Create the structure of the classifier taking into account the
@@ -175,6 +188,7 @@ public class mAnDE extends AbstractClassifier implements
         discretizer = new weka.filters.supervised.attribute.Discretize();
         discretizer.setInputFormat(instances);
         data = weka.filters.Filter.useFilter(instances, discretizer);
+        numInstances = data.numInstances();
         // Free up the data space by parameter
         instances.delete();
 
@@ -183,9 +197,16 @@ public class mAnDE extends AbstractClassifier implements
 
         // Create the mSPnDE's
         try {
+            // We check that with this bagSize, we will have more than 
+            // minimumInstances instances (default 3)
+            if (bagSize > 0) {
+                while ((numInstances * (bagSize/100)) < minimumInstances) {
+                    bagSize = 2 * bagSize;
+                }
+            }
+                        
             build_mSPnDEs();
-        } catch (Exception ex) {
-        }
+        } catch (Exception ex) {}
         
         // If we have not created mSPnDE's
         if (mSPnDEs.isEmpty()) {
@@ -205,6 +226,7 @@ public class mAnDE extends AbstractClassifier implements
                 if (!isEnsemble()) {
                     setEnsemble(true);
                     setBoosting(true);
+                    setBagSize(100);
                 } else {
                     // If we have already tried Boosting, disable and activate RF
                     if (isBoosting()) {
@@ -254,7 +276,6 @@ public class mAnDE extends AbstractClassifier implements
             for (int i = 0; i < varNumValues.length; i++) {
                 varNumValues[i] = data.attribute(i).numValues();
             }
-            numInstances = data.numInstances();
 
             calculateTables_mSPnDEs();
         }
@@ -286,7 +307,6 @@ public class mAnDE extends AbstractClassifier implements
         }
         
         // Add up all the probabilities of the mSPnDEs
-        //mSPnDEs.forEach((id, spode) -> {
         mSPnDEs.values().parallelStream().forEach((spode) -> {
             double[] temp = spode.probsForInstance(instance_d);
 
@@ -336,7 +356,7 @@ public class mAnDE extends AbstractClassifier implements
             if (boosting) {
                 AdaBoostM1_2 adaBoost = new AdaBoostM1_2();
                 adaBoost.setClassifier(j48);
-                adaBoost.setNumIterations(10);
+                adaBoost.setNumIterations(nTrees);
                 adaBoost.buildClassifier(data);
                 trees = Arrays.asList(adaBoost.getClassifiers());
 
@@ -347,7 +367,7 @@ public class mAnDE extends AbstractClassifier implements
 
                     // Set the number of parallel wires to 0 (automatic)
                     rf.setOptions(options);
-                    rf.setNumIterations(10);
+                    rf.setNumIterations(nTrees);
                     rf.setBagSizePercentDouble(bagSize);
                     rf.buildClassifier(data);
                     trees = Arrays.asList(rf.getClassifiers());
@@ -362,7 +382,7 @@ public class mAnDE extends AbstractClassifier implements
 
                     // Set the number of parallel wires to 0 (automatic)
                     bagging.setOptions(options);
-                    bagging.setNumIterations(10);
+                    bagging.setNumIterations(nTrees);
                     bagging.setBagSizePercentDouble(bagSize);
                     bagging.buildClassifier(data);
                     trees = Arrays.asList(bagging.getClassifiers());

@@ -1,0 +1,1 @@
+Main-Class: org.albacete.simd.experiments.singleExperiment
