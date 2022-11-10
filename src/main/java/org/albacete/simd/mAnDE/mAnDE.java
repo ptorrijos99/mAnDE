@@ -40,23 +40,23 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.trees.J48;
 import weka.classifiers.trees.REPTree;
+import static weka.classifiers.AbstractClassifier.runClassifier;
+
 import weka.core.Capabilities;
 import weka.core.Drawable;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.OptionHandler;
 import weka.core.Utils;
-import static weka.classifiers.AbstractClassifier.runClassifier;
 import weka.core.Option;
 
 public class mAnDE extends AbstractClassifier implements
@@ -125,29 +125,19 @@ public class mAnDE extends AbstractClassifier implements
 
     // mAnDE parameters //
     /**
-     * Performs REPTree trees instead of J48.
+     * Configure the base classifier in ensembles
      */
-    private boolean repTree = false;
+    private String baseClass = "Base";
 
+    /**
+     * If desired, configure the ensemble classifier
+     */
+    private String ensemble = "Bagging";
+    
     /**
      * Prune decision trees.
      */
     private boolean pruning = true;
-
-    /**
-     * Runs a set of decision trees instead of a single tree.
-     */
-    private boolean ensemble = false;
-
-    /**
-     * Runs a AdaBoost instead of a Bagging or Random Forest.
-     */
-    private boolean boosting = false;
-
-    /**
-     * Runs a Random Forest instead of Bagging.
-     */
-    private boolean randomForest = true;
 
     /**
      * Percentage of instances to be used to make each tree in the assembly.
@@ -157,7 +147,7 @@ public class mAnDE extends AbstractClassifier implements
     /**
      * Number of trees that the algorithm make in the structural learning.
      */
-    private int nTrees = 10;
+    private int nTrees = 100;
 
     /**
      * n of the mAnDE.
@@ -167,7 +157,7 @@ public class mAnDE extends AbstractClassifier implements
     /**
      * Minimum number of Instances to create a tree.
      */
-    private int minimumInstances = 3;
+    private final int minimumInstances = 3;
 
     /**
      * Create the structure of the classifier taking into account the
@@ -210,62 +200,38 @@ public class mAnDE extends AbstractClassifier implements
         
         // If we have not created mSPnDE's
         if (mSPnDEs.isEmpty()) {
-            boolean starts1 = !isEnsemble();
+            HashSet<String> done = new HashSet();
+            done.add(getEnsemble());
+            
+            setBagSize(100);
+            
+            String[] posClassifiers = {"Bagging", "RF", "Boosting"};
 
-            while (true) {
-                // When we have tried everything and can't run, we run Naive Bayes
-                if (!isEnsemble() && !starts1) {
-                    System.out.println("CAN'T RUN. WE RUN NAIVE BAYES.");
-                    modeNB = true;
-                    nb = new NaiveBayes();
-                    nb.buildClassifier(data);
-                    break;
-                }
-                // If the user specifies not to use ensembles and it does not 
-                // work, we activate them with Boosting
-                if (!isEnsemble()) {
-                    setEnsemble(true);
-                    setBoosting(true);
-                    setBagSize(100);
-                } else {
-                    // If we have already tried Boosting, disable and activate RF
-                    if (isBoosting()) {
-                        setBoosting(false);
-                        setRandomForest(true);
-                    } else {
-                        // If don´t works, we multiply bagSize by 5
-                        if (bagSize != 0)
-                            bagSize *= 5;
-                        else bagSize = 100;
-                        
-                        // If we have a bag size bigger than 100
-                        if (bagSize > 100) {
-                            bagSize = 100;
-                            // If we have already tried Random Forest, use Bagging
-                            if (isRandomForest()) {
-                                setRandomForest(false);
-                            } // If we have already tried also Bagging, do Naive Bayes
-                            else {
-                                starts1 = false;
-                                setEnsemble(false);
-                            }
-                        }
-                    }
+            // We try with Bagging, RF and Boosting
+            for (int i = 0; i < posClassifiers.length; i++) {
+                if (!done.contains(posClassifiers[i])) {
+                    setEnsemble(posClassifiers[i]);
+                    done.add(posClassifiers[i]);
                 }
 
-                // Try to build the mSPnDEs with the new hiperparameters
+                // Try to build the mSPnDEs with the new configuration
                 try {
                     build_mSPnDEs();
-                } catch (Exception ex) {
-                }
+                } catch (Exception ex) {}
 
                 // If we have created mSPnDEs, we end up with
                 if (!mSPnDEs.isEmpty()) {
                     break;
                 }
             }
+            
+            // If nothing works, we run NB
+            if (mSPnDEs.isEmpty()) {
+                modeNB = true;
+                nb = new NaiveBayes();
+                nb.buildClassifier(data);
+            }
         }
-        System.out.println("  mSPnDEs created");
 
         // If we have not run Naive Bayes, we calculate the mAnDE tables.
         if (!modeNB) {
@@ -338,71 +304,77 @@ public class mAnDE extends AbstractClassifier implements
 
         //Classifier[] trees;
         List<Classifier> trees;
-
-        J48 j48 = new J48();
-        REPTree repT = new REPTree();
-
-        // We define whether we want pruning or not.
-        if (!pruning) {
-            j48.setUnpruned(true);
-            repT.setNoPruning(true);
+        Classifier base;
+        
+        switch (baseClass) {
+            case "J48":
+                base = new J48();
+                if (!pruning) {
+                    ((J48)base).setUnpruned(true);
+                }
+                break;
+            case "REPTree":
+                base = new REPTree();
+                if (!pruning) {
+                    ((REPTree)base).setNoPruning(true);
+                }
+                break;
+            default:
+                base = new J48();
+                if (!pruning) {
+                    ((J48)base).setUnpruned(true);
+                }
+                break;
         }
+        
+        if (!ensemble.equals("None")) {
+            String[] options = new String[2];
+            options[0] = "-num-slots";
+            options[1] = "0";
 
-        String[] options = new String[2];
-        options[0] = "-num-slots";
-        options[1] = "0";
-
-        if (ensemble) {
-            if (boosting) {
-                AdaBoostM1_2 adaBoost = new AdaBoostM1_2();
-                adaBoost.setClassifier(j48);
-                adaBoost.setNumIterations(nTrees);
-                adaBoost.buildClassifier(data);
-                trees = Arrays.asList(adaBoost.getClassifiers());
-
-            } else {
-                if (randomForest) {
-                    // Create a Random Forest
+            switch (getEnsemble()) {
+                case "Bagging":
+                    Bagging2 bagging = new Bagging2();
+                    bagging.setOptions(options);
+                    bagging.setClassifier(base);
+                    bagging.setNumIterations(nTrees);
+                    bagging.setBagSizePercentDouble(bagSize);
+                    bagging.buildClassifier(data);
+                    trees = Arrays.asList(bagging.getClassifiers());
+                    break;
+                case "AdaBoost":
+                    AdaBoostM1_2 ab = new AdaBoostM1_2();
+                    ab.setClassifier(base);
+                    ab.setNumIterations(nTrees);
+                    ab.buildClassifier(data);
+                    trees = Arrays.asList(ab.getClassifiers());
+                    break;
+                case "RF":
                     RandomForest2 rf = new RandomForest2();
-
-                    // Set the number of parallel wires to 0 (automatic)
                     rf.setOptions(options);
                     rf.setNumIterations(nTrees);
                     rf.setBagSizePercentDouble(bagSize);
                     rf.buildClassifier(data);
                     trees = Arrays.asList(rf.getClassifiers());
-
-                } else {
-                    Bagging2 bagging = new Bagging2();
-                    if (repTree) {
-                        bagging.setClassifier(repT);
-                    } else {
-                        bagging.setClassifier(j48);
-                    }
-
-                    // Set the number of parallel wires to 0 (automatic)
-                    bagging.setOptions(options);
-                    bagging.setNumIterations(nTrees);
-                    bagging.setBagSizePercentDouble(bagSize);
-                    bagging.buildClassifier(data);
-                    trees = Arrays.asList(bagging.getClassifiers());
-                }
+                    break;
+                default:
+                    throw new Exception("Ensemble type not supported");
             }
             
-            // Parse trees to SPnDEs
             trees.parallelStream().forEach((tree) -> {
                 graphToSPnDE(treeParser(tree));
             });
-                
+            
         } else {
-            if (repTree) {
-                repT.buildClassifier(data);
-                graphToSPnDE(treeParser(repT));
-            } else {
-                j48.buildClassifier(data);
-                graphToSPnDE(treeParser(j48));
-            }
+            base.buildClassifier(data);
+            graphToSPnDE(treeParser(base));
         }
+
+        double var = 0;
+        for (mSPnDE a : mSPnDEs.values()) {
+            var += a.getNChildren();
+        }
+        System.out.println(mSPnDEs.size() + " mSPnDEs creados, " + (var/mSPnDEs.size()) + " hijos por mSPnDE");
     }
 
     /**
@@ -417,7 +389,11 @@ public class mAnDE extends AbstractClassifier implements
             lines = ((Drawable) clasificador).graph().split("\r\n|\r|\n");
         } catch (Exception ex) {
         }
-
+        /*try {
+            System.out.println(((Drawable)clasificador).graph());
+        } catch (Exception ex) {
+            Logger.getLogger(mAnDE.class.getName()).log(Level.SEVERE, null, ex);
+        }*/
         HashMap<String, Node> nodes = new HashMap();
         int init = -1, fin = -1;
 
@@ -428,9 +404,10 @@ public class mAnDE extends AbstractClassifier implements
             }
         }
 
-        for (int i = 0; i < lines.length; i++) {
+        for (int i = lines.length - 1; i >= init; i--) {
             if (lines[i].contains(" [label")) {
                 fin = i;
+                break;
             }
         }
 
@@ -660,38 +637,24 @@ public class mAnDE extends AbstractClassifier implements
     }
 
     /**
-     * @param repTree The repTree hyperparameter to be set
+     * @param baseClass The baseClass hyperparameter to set
      */
-    public void setRepTree(boolean repTree) {
-        this.repTree = repTree;
+    public void setBaseClass(String baseClass) {
+        this.baseClass = baseClass;
     }
-
+    
     /**
-     * @param ensemble The ensemble hyperparameter to be set
+     * @param nTrees The nTrees to be set
      */
-    public void setEnsemble(boolean ensemble) {
+    public void setnTrees(int nTrees) {
+        this.nTrees = nTrees;
+    }
+    
+    /**
+     * @param ensemble The ensemble to set
+     */
+    public void setEnsemble(String ensemble) {
         this.ensemble = ensemble;
-    }
-
-    /**
-     * @param boosting The boosting to be set
-     */
-    public void setBoosting(boolean boosting) {
-        this.boosting = boosting;
-    }
-
-    /**
-     * @param randomForest The randomForest to be set
-     */
-    public void setRandomForest(boolean randomForest) {
-        this.randomForest = randomForest;
-    }
-
-    /**
-     * @return The repTree
-     */
-    public boolean isRepTree() {
-        return repTree;
     }
 
     /**
@@ -699,27 +662,6 @@ public class mAnDE extends AbstractClassifier implements
      */
     public boolean isPruning() {
         return pruning;
-    }
-
-    /**
-     * @return The ensemble
-     */
-    public boolean isEnsemble() {
-        return ensemble;
-    }
-
-    /**
-     * @return The boosting
-     */
-    public boolean isBoosting() {
-        return boosting;
-    }
-
-    /**
-     * @return The randomForest
-     */
-    public boolean isRandomForest() {
-        return randomForest;
     }
 
     /**
@@ -734,6 +676,27 @@ public class mAnDE extends AbstractClassifier implements
      */
     public int getN() {
         return n;
+    }
+    
+    /**
+     * @return The baseClass
+     */
+    public String getBaseClass() {
+        return baseClass;
+    }
+    
+    /**
+     * @return The nTrees
+     */
+    public int getnTrees() {
+        return nTrees;
+    }
+    
+    /**
+     * @return The ensemble
+     */
+    public String getEnsemble() {
+        return ensemble;
     }
 
     /**
@@ -795,13 +758,7 @@ public class mAnDE extends AbstractClassifier implements
             n = 1;
         }
 
-        repTree = Utils.getFlag("REP", options);
-
         pruning = !Utils.getFlag("P", options);
-
-        ensemble = Utils.getFlag("E", options);
-
-        randomForest = Utils.getFlag("RF", options);
 
         String Bag = Utils.getOption('B', options);
         if (Bag.length() != 0) {
@@ -825,20 +782,8 @@ public class mAnDE extends AbstractClassifier implements
         result.add("-N");
         result.add("" + n);
 
-        if (repTree) {
-            result.add("-REP");
-        }
-
         if (!pruning) {
             result.add("-P");
-        }
-
-        if (ensemble) {
-            result.add("-E");
-        }
-
-        if (randomForest) {
-            result.add("-RF");
         }
 
         result.add("-B");

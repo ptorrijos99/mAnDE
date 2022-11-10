@@ -199,7 +199,7 @@ public class mSP1DE implements mSPnDE, Serializable {
      */
     @Override
     public int getNChildren() {
-        return children.size();
+        return listChildren.size();
     }
 
     /**

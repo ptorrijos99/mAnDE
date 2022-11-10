@@ -1,126 +1,83 @@
 #!/bin/bash
-HOME_FOLDER="/home/pablot/ParallelBNs/" #/Users/jdls/developer/projects/ParallelBNs/"
-NETWORKS_FOLDER=${HOME_FOLDER}"res/networks/";
-BBDD_FOLDER=${NETWORKS_FOLDER}"BBDD/";
-TEST_FOLDER=${NETWORKS_FOLDER}"BBDD/tests/";
-ENDING_NETWORKS=".xbif";
-#ENDING_BBDD10K="10k.csv";
-#ENDING_BBDD50K="50k.csv";
-PARAMS_FOLDER=${HOME_FOLDER}"res/params/";
-SAVE_FILE=${PARAMS_FOLDER}"hyperparams.txt"
-#declare -a algorithms=("ges" "pges" "hc" "phc" "pfhcbes")
+HOME_FOLDER="$HOME/mAnDE2/";
+BBDD_FOLDER="res/bbdd/";
+PARAMS_FOLDER="res/params/";
 
-#declare -a net_names=("alarm" "andes" "barley" "cancer" "child" "earthquake" "hailfinder" "hepar2" "insurance" "link" "mildew" "munin" "pigs" "water" "win95pts")
-#declare -a net_names=("andes")
+BBDD_NAMES="${PARAMS_FOLDER}bbdd_names.txt"
+SAVE_FILE="${PARAMS_FOLDER}hyperparams1.txt";
+SAVE_FILE1="${PARAMS_FOLDER}hyperparamsRF.txt";
+SAVE_FILE2="${PARAMS_FOLDER}hyperparamsB1.txt";
+SAVE_FILE3="${PARAMS_FOLDER}hyperparamsB2.txt";
+SAVE_FILE4="${PARAMS_FOLDER}hyperparamsBo1.txt";
+SAVE_FILE5="${PARAMS_FOLDER}hyperparamsBo2.txt";
 
-declare networks=()
-for net in ${net_names[@]}; do
-    networks+=(${NETWORKS_FOLDER}$net${ENDING_NETWORKS} )
-done
+SAVE_FILE20="${PARAMS_FOLDER}hyperparams_resto.txt";
+SAVE_FILE21="${PARAMS_FOLDER}hyperparams_restoRF.txt";
+SAVE_FILE22="${PARAMS_FOLDER}hyperparams_restoB1.txt";
+SAVE_FILE23="${PARAMS_FOLDER}hyperparams_restoB2.txt";
+SAVE_FILE24="${PARAMS_FOLDER}hyperparams_restoBo1.txt";
+SAVE_FILE25="${PARAMS_FOLDER}hyperparams_restoBo2.txt";
 
-#echo "${networks[@]}"
-
-#declare -a databases=(
-#    ${BBDD_FOLDER}"alarm"${ENDING_BBDD10K} ${BBDD_FOLDER}"alarm"${ENDING_BBDD50K}
-#    ${BBDD_FOLDER}"cancer"${ENDING_BBDD10K} ${BBDD_FOLDER}"cancer"${ENDING_BBDD50K}
-#    ${BBDD_FOLDER}"barley"${ENDING_BBDD10K} ${BBDD_FOLDER}"barley"${ENDING_BBDD50K}
-#    ${BBDD_FOLDER}"child"${ENDING_BBDD10K} ${BBDD_FOLDER}"child"${ENDING_BBDD50K}
-#    ${BBDD_FOLDER}"insurance"${ENDING_BBDD10K} ${BBDD_FOLDER}"insurance"${ENDING_BBDD50K}
-#    ${BBDD_FOLDER}"mildew"${ENDING_BBDD10K} ${BBDD_FOLDER}"mildew"${ENDING_BBDD50K}
-#    ${BBDD_FOLDER}"water"${ENDING_BBDD10K} ${BBDD_FOLDER}"water"${ENDING_BBDD50K}
-#)
-endings=(".xbif_.csv" ".xbif50001_.csv" ".xbif50002_.csv" ".xbif50003_.csv"
-".xbif50004_.csv" ".xbif50005_.csv" ".xbif50006_.csv" ".xbif50007_.csv" ".xbif50008_.csv"
-".xbif50009_.csv" ".xbif50001246_.csv")
-
-#databases=()
-#for net in ${net_names[@]}; do
-#    for ending in ${endings[@]}; do
-#        databases+=(${BBDD_FOLDER}$net$ending)
-#    done
-#done
-
-#tests=()
-#for net in ${net_names[@]}; do
-#    tests+=(${TEST_FOLDER}$net"_test.csv")
-#done
-seeds=(2 3 5 7 11 13 17 19 23 29)
+#seeds=(2 3 5 7 11 13 17 19 23 29)
 
 
-#echo "${tests[@]}"
+declare -a algorithms=("NB" "J48" "REPTree") 
+seeds=(2)
+declare -a discretized=("true" "false")
+nTrees=(10 20 50 100)
+declare -a featureSelection=("none" "FCBF" "IWSS_NB" "InfoGain" "ReliefF")
+declare -a baseClas=("REPTree" "J48" "Stump")
+ns=(1 2)
 
-#declare -a nThreads=(1 2 4 8)
-#declare -a nItInterleavings=(2 3 4)
-declare -a nItInterleavings=(5 10 15)
-#maxIterations=250
+# bbdd, algorithm, seed, folds, discretized, nTrees, featureSelection, baseClas, (n, ensemble, boosting, RF, bagSize)
 
+# FEATURE SELECTION
+for feature in ${featureSelection[@]}; do
+    # mAnDE
+    for n in ${ns[@]}; do
+        for seed in ${seeds[@]}; do
+            while read bbdd; do
+                # 1 árbol
+                echo $bbdd "mAnDE" $seed "3" "false" "1" $feature "null" $n "false" "false" "false" "100" >> $SAVE_FILE
 
-# Saving params
-for ending in ${endings[@]};
-do
-    for nItInterleaving in ${nItInterleavings[@]}
-    do
-        for seed in ${seeds[@]}
-        do
-            echo $ending $nthread $nItInterleaving $seed >> $SAVE_FILE
+                for trees in ${nTrees[@]}; do
+                    # RF
+                    echo $bbdd "mAnDE" $seed "3" "false" $trees $feature "RandomTree" $n "true" "false" "true" "100" >> $SAVE_FILE1
+
+                    # Bagging
+                    echo $bbdd "mAnDE" $seed "3" "false" $trees $feature "J48" $n "true" "false" "false" "100" >> $SAVE_FILE2
+                    echo $bbdd "mAnDE" $seed "3" "false" $trees $feature "REPTree" $n "true" "false" "false" "100" >> $SAVE_FILE3
+
+                    # Boosting
+                    echo $bbdd "mAnDE" $seed "3" "false" $trees $feature "Stump" $n "true" "true" "false" "100" >> $SAVE_FILE4
+                    echo $bbdd "mAnDE" $seed "3" "false" $trees $feature "REPTree" $n "true" "true" "false" "100" >> $SAVE_FILE5
+                done
+            done < "$BBDD_NAMES"
+        done
+    done
+
+    # Resto de algoritmos
+    for discret in ${discretized[@]}; do
+        for seed in ${seeds[@]}; do
+            while read bbdd; do
+                for algorithm in ${algorithms[@]}; do
+                    echo $bbdd $algorithm $seed "3" $discret "1" $feature "null" "0" "false" "false" "false" "0" >> $SAVE_FILE20
+                done
+
+                for trees in ${nTrees[@]}; do
+                    # RF
+                    echo $bbdd "RandomForest" $seed "3" $discret $trees $feature "RandomTree" "0" "false" "false" "false" "0" >> $SAVE_FILE21
+
+                    # Bagging
+                    echo $bbdd "Bagging" $seed "3" $discret $trees $feature "J48" "0" "false" "false" "false" "0" >> $SAVE_FILE22
+                    echo $bbdd "Bagging" $seed "3" $discret $trees $feature "REPTree" "0" "false" "false" "false" "0" >> $SAVE_FILE23
+
+                    # Boosting
+                    echo $bbdd "AdaBoost" $seed "3" $discret $trees $feature "Stump" "0" "false" "false" "false" "0" >> $SAVE_FILE24
+                    echo $bbdd "AdaBoost" $seed "3" $discret $trees $feature "REPTree" "0" "false" "false" "false" "0" >> $SAVE_FILE25
+                done
+            done < "$BBDD_NAMES"
         done
     done
 done
 
-
-
-
-# len_nets=${#networks[@]};
-# for((i=0;i<$len_nets;i++))
-# do
-#     netPath=${networks[$i]};
-#     testPath=${tests[$i]};
-#     net_name=${net_names[$i]}
-
-#     # Deleting files of previous params
-#     FILE=${PARAMS_FOLDER}experiments_${net_name}.txt
-#     #if test -f "$FILE"; then
-#     #    rm $FILE
-#     #fi
-
-#     # Creating new File
-#     >${FILE}
-#     echo "Creating experiments for: ${net_name} at: ${FILE}"
-#     #if test -f "$FILE"; then
-#     #    echo "File Created: $FILE"
-#     #fi
-#     # Defining Databases for current network
-#     databases=()
-#     for ending in ${endings[@]}; do
-#         databases+=(${BBDD_FOLDER}${net_name}$ending)
-#     done
-
-#     for dataPath in ${databases[@]};
-#     do
-#         for nthread in ${nThreads[@]};
-#         do
-#             for nItInterleaving in ${nItInterleavings[@]};
-#             do
-#                 for alg in ${algorithms[@]};
-#                 do
-#                     if [ $alg == "ges" ]
-#                     then
-#                         echo ${net_names[$i]} $alg $netPath $dataPath $testPath >> $FILE
-#                     elif [ $alg == "hc" ]
-#                         then
-#                             echo ${net_names[$i]} $alg $netPath $dataPath $testPath $nItInterleaving $maxIterations >> $FILE
-#                     else
-#                         for seed in ${seeds[@]};
-#                         do
-#                             echo ${net_names[$i]} $alg $netPath $dataPath $testPath $nItInterleaving $maxIterations $nthread $seed >> $FILE
-#                         done
-#                     fi
-#                 done
-#             done
-#         done
-#     done
-# done
-
-# # Iterate the string array using for loop
-# # echo "$net_number $bbdd_number $fusion $nThreads $nItInterleaving" #>> experiments.txt
-                    

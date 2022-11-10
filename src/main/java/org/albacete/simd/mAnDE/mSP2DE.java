@@ -217,7 +217,7 @@ public class mSP2DE implements mSPnDE, Serializable {
      */
     @Override
     public int getNChildren() {
-        return children.size();
+        return listChildren.size();
     }
 
     /**
