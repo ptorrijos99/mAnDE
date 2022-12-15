@@ -49,6 +49,7 @@ import weka.classifiers.Classifier;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.trees.J48;
 import weka.classifiers.trees.REPTree;
+import weka.classifiers.trees.LMT;
 import static weka.classifiers.AbstractClassifier.runClassifier;
 
 import weka.core.Capabilities;
@@ -154,6 +155,8 @@ public class mAnDE extends AbstractClassifier implements
      */
     private int n = 1;
     
+    private double addNB = 0;
+    
     /**
      * Minimum number of Instances to create a tree.
      */
@@ -204,6 +207,7 @@ public class mAnDE extends AbstractClassifier implements
             done.add(getEnsemble());
             
             setBagSize(100);
+            setBaseClass("J48");
             
             String[] posClassifiers = {"Bagging", "RF", "Boosting"};
 
@@ -232,7 +236,12 @@ public class mAnDE extends AbstractClassifier implements
                 nb.buildClassifier(data);
             }
         }
-
+        
+        if (getAddNB() != 0 && !mSPnDEs.isEmpty())
+        {
+            nb = new NaiveBayes();
+            nb.buildClassifier(data);
+        }
         // If we have not run Naive Bayes, we calculate the mAnDE tables.
         if (!modeNB) {
             // Define global variables
@@ -281,6 +290,14 @@ public class mAnDE extends AbstractClassifier implements
             }
         });
 
+        if (getAddNB() != 0) {
+            double percentaje = getAddNB() * mSPnDEs.size();
+            double[] temp = nb.distributionForInstance(instance_d);
+            for (int i = 0; i < res.length; i++) {
+                res[i] += percentaje * temp[i];
+            }
+        }
+
         /* Normalize the result. If the sum is 0 (Utils.normalize will return 
          * an IllegalArgumentException), we set the same value in each 
          * possible value of the class.
@@ -292,7 +309,7 @@ public class mAnDE extends AbstractClassifier implements
                 res[i] = 1.0 / (varNumValues.length - 1);
             }
         }
-
+        
         return res;
     }
 
@@ -302,7 +319,6 @@ public class mAnDE extends AbstractClassifier implements
     private void build_mSPnDEs() throws Exception {
         mSPnDEs = new ConcurrentHashMap<>();
 
-        //Classifier[] trees;
         List<Classifier> trees;
         Classifier base;
         
@@ -319,6 +335,10 @@ public class mAnDE extends AbstractClassifier implements
                     ((REPTree)base).setNoPruning(true);
                 }
                 break;
+            case "LMT":
+                base = new LMT();
+                ((LMT)base).setNumBoostingIterations(nTrees);
+                break;
             default:
                 base = new J48();
                 if (!pruning) {
@@ -327,7 +347,7 @@ public class mAnDE extends AbstractClassifier implements
                 break;
         }
         
-        if (!ensemble.equals("None")) {
+        if (!ensemble.equals("none")) {
             String[] options = new String[2];
             options[0] = "-num-slots";
             options[1] = "0";
@@ -356,6 +376,13 @@ public class mAnDE extends AbstractClassifier implements
                     rf.setBagSizePercentDouble(bagSize);
                     rf.buildClassifier(data);
                     trees = Arrays.asList(rf.getClassifiers());
+                    break;
+                case "LogitBoost":
+                    LogitBoost2 lb = new LogitBoost2();
+                    lb.setClassifier(base);
+                    lb.setNumIterations(nTrees);
+                    lb.buildClassifier(data);
+                    trees = Arrays.asList(lb.getClassifiers());
                     break;
                 default:
                     throw new Exception("Ensemble type not supported");
@@ -389,11 +416,6 @@ public class mAnDE extends AbstractClassifier implements
             lines = ((Drawable) clasificador).graph().split("\r\n|\r|\n");
         } catch (Exception ex) {
         }
-        /*try {
-            System.out.println(((Drawable)clasificador).graph());
-        } catch (Exception ex) {
-            Logger.getLogger(mAnDE.class.getName()).log(Level.SEVERE, null, ex);
-        }*/
         HashMap<String, Node> nodes = new HashMap();
         int init = -1, fin = -1;
 
@@ -413,8 +435,8 @@ public class mAnDE extends AbstractClassifier implements
 
         if (init != -1) {
             // We add the father
-            //N0 [label="petallength" ]             J48
-            //N58640b4a [label="1: petalwidth"]     RandomTree
+            //N0 [label="petallength" ]             J48 and LMTree
+            //N58640b4a [label="1: petalwidth"]     RandomTree and REPTree
             String id = lines[init].substring(0, lines[init].indexOf(" [label"));
             String name = "", finLabel;
             if (lines[init].contains(": ")) {
@@ -424,7 +446,7 @@ public class mAnDE extends AbstractClassifier implements
                 } catch (Exception ex) {
                 }
             } else {
-                // J48
+                // J48 and LMTree
                 try {
                     name = lines[init].substring(lines[init].indexOf("=\"") + 2, lines[init].indexOf("\" ]"));
                 } catch (Exception ex) {
@@ -440,7 +462,7 @@ public class mAnDE extends AbstractClassifier implements
             }
 
             for (int i = init + 1; i < fin; i++) {
-                //N0->N1 [label="= \'(-inf-2.6]\'"]                     J48
+                //N0->N1 [label="= \'(-inf-2.6]\'"]                     J48 and LMTree
                 //N529c603a->N6f5883ef [label=" = \'(5.45-5.75]\'"]     RandomTree and REPTree
                 if (lines[i].contains("->")) {
                     String id1 = lines[i].substring(0, lines[i].indexOf("->"));
@@ -450,7 +472,7 @@ public class mAnDE extends AbstractClassifier implements
                         nodes.put(id2, new Node(id2, nodes.get(id1)));
                     }
                     nodes.get(id1).addChild(nodes.get(id2));
-                } //N0 [label="petallength" ]                J48
+                } //N0 [label="petallength" ]                J48 and LMTree
                 //N58640b4a [label="1: petalwidth"]        RandomTree and REPTree
                 else if (!lines[i].contains(" (")) {
                     if (lines[i].contains("\" ]")) {
@@ -472,7 +494,7 @@ public class mAnDE extends AbstractClassifier implements
                         // RandomTree and REPTree
                         name = lines[i].substring(lines[i].indexOf(": ") + 2, lines[i].indexOf(finLabel));
                     } else {
-                        // J48
+                        // J48 and LMTree
                         name = lines[i].substring(lines[i].indexOf("=\"") + 2, lines[i].indexOf(finLabel));
                     }
 
@@ -656,6 +678,13 @@ public class mAnDE extends AbstractClassifier implements
     public void setEnsemble(String ensemble) {
         this.ensemble = ensemble;
     }
+    
+    /**
+     * @param addNB The addNB to set
+     */
+    public void setAddNB(double addNB) {
+        this.addNB = addNB;
+    }
 
     /**
      * @return The pruning
@@ -697,6 +726,13 @@ public class mAnDE extends AbstractClassifier implements
      */
     public String getEnsemble() {
         return ensemble;
+    }
+    
+    /**
+     * @return The addNB
+     */
+    public double getAddNB() {
+        return addNB;
     }
 
     /**

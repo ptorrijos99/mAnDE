@@ -38,7 +38,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.Random;
-import org.albacete.simd.mAnDE.mAnDE;
+
 import weka.attributeSelection.ASEvaluation;
 import weka.attributeSelection.ASSearch;
 import weka.attributeSelection.CfsSubsetEval;
@@ -53,6 +53,7 @@ import weka.attributeSelection.ReliefFAttributeEval;
 import weka.attributeSelection.SVMAttributeEval;
 import weka.attributeSelection.SymmetricalUncertAttributeSetEval;
 import weka.attributeSelection.WrapperSubsetEval;
+
 import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.AveragedNDependenceEstimators.A1DE;
@@ -73,6 +74,9 @@ import weka.classifiers.trees.J48;
 import weka.classifiers.trees.LMT;
 import weka.classifiers.trees.REPTree;
 import weka.classifiers.trees.RandomForest;
+import org.albacete.simd.mAnDE.mAnDE;
+import weka.classifiers.bayes.NaiveBayesMultinomial;
+
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
 import weka.filters.supervised.attribute.Discretize;
@@ -152,12 +156,17 @@ public class singleExperiment {
                 ((mAnDE)clas).setN(Integer.parseInt(params[8]));
                 ((mAnDE)clas).setEnsemble(params[9]);
                 ((mAnDE)clas).setBagSize(Double.parseDouble(params[10]));
+                ((mAnDE)clas).setAddNB(Double.parseDouble(params[11]));
                 
                 ((mAnDE)clas).setnTrees(nTrees);
                 break;
                 
             case "NB":
                 clas = new NaiveBayes();
+                break;
+                
+            case "MultinomialNB":
+                clas = new NaiveBayesMultinomial();
                 break;
   
             case "A1DE":
@@ -229,20 +238,20 @@ public class singleExperiment {
                 ((AdaBoostM1)clas).setNumIterations(nTrees);
                 break;
                 
-            case "LMT":
-                clas = new LMT();
-                break;
-                
-            // Linear regreesion algorithms
-            case "SVM":
-                clas = new LibSVM();
-                break;
-                
             case "LogitBoost":
                 clas = new SimpleLogistic();
                 ((SimpleLogistic)clas).setNumBoostingIterations(nTrees);
                 break;   
-                
+            
+            // Linear regreesion algorithms
+            case "LMT":
+                clas = new LMT();
+                break;
+
+            case "SVM":
+                clas = new LibSVM();
+                break;
+
             // Scikit-learn algorithms
             case "XGB":
                 clas = new ScikitLearnClassifier();
@@ -255,7 +264,7 @@ public class singleExperiment {
                 optionsSkL[1] = "GradientBoostingClassifier";
                 ((ScikitLearnClassifier)clas).setOptions(optionsSkL);
                 
-                optionsLearner = "n_estimators=" + nTrees + ", random_state=" + random;
+                optionsLearner = "n_estimators=" + nTrees + ", random_state=" + seed;
                 ((ScikitLearnClassifier)clas).setLearnerOpts(optionsLearner);
                 break;  
                 
@@ -264,7 +273,7 @@ public class singleExperiment {
                 optionsSkL[1] = "ExtraTreeClassifier";
                 ((ScikitLearnClassifier)clas).setOptions(optionsSkL);
                 
-                optionsLearner = "random_state=" + random;
+                optionsLearner = "random_state=" + seed;
                 ((ScikitLearnClassifier)clas).setLearnerOpts(optionsLearner);
                 break;  
                 
@@ -274,7 +283,7 @@ public class singleExperiment {
                 ((ScikitLearnClassifier)clas).setOptions(optionsSkL);
                 
                 optionsLearner = "n_estimators=" + nTrees + 
-                        ", n_jobs=-1" + ", random_state=" + random;
+                        ", n_jobs=-1" + ", random_state=" + seed;
                 ((ScikitLearnClassifier)clas).setLearnerOpts(optionsLearner);
                 break;  
 
@@ -283,7 +292,7 @@ public class singleExperiment {
                 optionsSkL[1] = "RidgeClassifier";
                 ((ScikitLearnClassifier)clas).setOptions(optionsSkL);
                 
-                optionsLearner = "random_state=" + random;
+                optionsLearner = "random_state=" + seed;
                 ((ScikitLearnClassifier)clas).setLearnerOpts(optionsLearner);
                 break;  
                 
@@ -293,7 +302,7 @@ public class singleExperiment {
                 ((ScikitLearnClassifier)clas).setOptions(optionsSkL);
                 break;  
                 
-            case "MultinomialNB":
+            case "SkLMultinomialNB":
                 clas = new ScikitLearnClassifier();
                 optionsSkL[1] = "MultinomialNB";
                 ((ScikitLearnClassifier)clas).setOptions(optionsSkL);
@@ -346,13 +355,13 @@ public class singleExperiment {
                 search = new FCBFSearch();
                 break;
             
-            case "IWSS": // Pablo Bermejo, va lento
+            case "IWSS": // Va lento
                 asc = new AttributeSelectedClassifier();
                 evaluator = new WrapperSubsetEval();
                 search = new IWSS();
                 break;
                 
-            case "IWSS_NB": // Pablo Bermejo
+            case "IWSS_NB":
                 asc = new AttributeSelectedClassifier();
                 evaluator = new WrapperSubsetEval();
                 search = new IWSSembeddedNB();
@@ -428,7 +437,7 @@ public class singleExperiment {
                 + params[0] + "_" + params[1] + "_" + params[2] 
                 + "_" + params[3] + "_" + params[4] + "_" + params[5] 
                 + "_" + params[6] + "_" + params[7] + "_" + params [8]
-                + "_" + params[9] + "_" + params[10] + ".csv";
+                + "_" + params[9] + "_" + params[10] + "_" + params[11] + ".csv";
 
         File file = new File(savePath);
         
@@ -472,7 +481,7 @@ public class singleExperiment {
             String output = params[0] + "," + params[1] + "," + params[2] + ","
                     + folds + "," + params[4] + "," + params[5] + ","
                     + params[6] + "," + params[7] + "," + params[8] + ","
-                    + params[9] + "," + params[10] + ","
+                    + params[9] + "," + params[10] + "," + params[11] + ","
                     + evaluation.pctCorrect() + "," + fm + "," + precision + ","
                     + recall + "," + time + "\n";
             csvWriter.append(output);
