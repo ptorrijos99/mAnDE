@@ -398,10 +398,20 @@ public class mAnDE extends AbstractClassifier implements
         }
 
         double var = 0;
+        double max = 0;
+        double min = Double.POSITIVE_INFINITY;
         for (mSPnDE a : mSPnDEs.values()) {
+            if (a.getNChildren() > max) 
+                max = a.getNChildren();
+            if (a.getNChildren() < min)
+                min = a.getNChildren();
             var += a.getNChildren();
         }
-        System.out.println(mSPnDEs.size() + " mSPnDEs creados, " + (var/mSPnDEs.size()) + " hijos por mSPnDE");
+        System.out.println("mSPnDEs," 
+                + mSPnDEs.size() 
+                + "," + (var/mSPnDEs.size())
+                + "," + max
+                + "," + min);
     }
 
     /**
