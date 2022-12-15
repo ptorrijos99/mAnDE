@@ -107,9 +107,6 @@ public class singleExperiment {
             }
             line = br.readLine();
 
-            // Printing params
-            System.out.println(line);
-
             //Splitting params
             params = line.split(" ");
         } catch (FileNotFoundException e) {
@@ -438,16 +435,19 @@ public class singleExperiment {
         String savePath;
         
         // Set name of the save file
-        savePath = EXPERIMENTS_FOLDER  + "experiment_results_" 
+        savePath = "experiment_results_" 
                 + params[0] + "_" + params[1] + "_" + params[2] 
                 + "_" + params[3] + "_" + params[4] + "_" + params[5] 
                 + "_" + params[6] + "_" + params[7] + "_" + params [8]
                 + "_" + params[9] + "_" + params[10] + "_" + params[11] + ".csv";
+        
+        System.out.println(savePath + "\n");
+        
+        savePath = EXPERIMENTS_FOLDER + savePath;
 
         File file = new File(savePath);
         
         if(file.length() == 0) {
-            System.out.println("   ---   " + name + "   ---   ");
             double init = System.currentTimeMillis();
 
             Evaluation evaluation = new Evaluation(data);
@@ -478,9 +478,9 @@ public class singleExperiment {
             probAciertos = probAciertos/evaluation.correct();
             probFallos[0] = probFallos[0]/evaluation.incorrect();
             probFallos[1] = probFallos[1]/evaluation.incorrect();
-            System.out.println(" Mean of probabilities for the predicted class in hits: " + probAciertos + 
-                    "\n Mean of probabilities for the predicted class in failures: " + probFallos[0] +
-                    "\n Mean of probabilities for the real class in failures: : " + probFallos[1] + "\n");
+            System.out.println("Mean of probabilities for the predicted class in hits: " + probAciertos + 
+                    "\nMean of probabilities for the predicted class in failures: " + probFallos[0] +
+                    "\nMean of probabilities for the real class in failures: : " + probFallos[1] + "\n");
 
             double fm = 0;
             double precision = 0;
