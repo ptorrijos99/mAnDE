@@ -39,6 +39,11 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.Random;
 
+import weka.core.Instances;
+import weka.core.converters.ConverterUtils;
+
+import weka.filters.supervised.attribute.Discretize;
+
 import weka.attributeSelection.ASEvaluation;
 import weka.attributeSelection.ASSearch;
 import weka.attributeSelection.CfsSubsetEval;
@@ -74,12 +79,12 @@ import weka.classifiers.trees.J48;
 import weka.classifiers.trees.LMT;
 import weka.classifiers.trees.REPTree;
 import weka.classifiers.trees.RandomForest;
-import org.albacete.simd.mAnDE.mAnDE;
-import weka.classifiers.bayes.NaiveBayesMultinomial;
 
-import weka.core.Instances;
-import weka.core.converters.ConverterUtils;
-import weka.filters.supervised.attribute.Discretize;
+import weka.classifiers.bayes.NaiveBayesMultinomial;
+import weka.classifiers.evaluation.NominalPrediction;
+import weka.classifiers.evaluation.Prediction;
+
+import org.albacete.simd.mAnDE.mAnDE;
 
 public class singleExperiment {
     
@@ -164,7 +169,7 @@ public class singleExperiment {
             case "NB":
                 clas = new NaiveBayes();
                 break;
-                
+
             case "MultinomialNB":
                 clas = new NaiveBayesMultinomial();
                 break;
@@ -452,6 +457,30 @@ public class singleExperiment {
 
             System.out.println(evaluation.toSummaryString());
             System.out.println(evaluation.toMatrixString());
+            
+            double probAciertos = 0;
+            double[] probFallos = new double[2];
+            
+            for (Prediction temp : evaluation.predictions()) {
+                NominalPrediction p = (NominalPrediction)temp;
+                int predicted = (int)p.predicted();
+                int real = (int)p.actual();
+                
+                // Si acierta
+                if (predicted == real) {
+                    probAciertos += p.distribution()[predicted];
+                } else {
+                    probFallos[0] += p.distribution()[predicted];
+                    probFallos[1] += p.distribution()[real];
+                }
+            }
+            
+            probAciertos = probAciertos/evaluation.correct();
+            probFallos[0] = probFallos[0]/evaluation.incorrect();
+            probFallos[1] = probFallos[1]/evaluation.incorrect();
+            System.out.println(" Mean of probabilities for the predicted class in hits: " + probAciertos + 
+                    "\n Mean of probabilities for the predicted class in failures: " + probFallos[0] +
+                    "\n Mean of probabilities for the real class in failures: : " + probFallos[1] + "\n");
 
             double fm = 0;
             double precision = 0;
@@ -469,13 +498,13 @@ public class singleExperiment {
             fm = fm / data.classAttribute().numValues();
             precision = precision / data.classAttribute().numValues();
             recall = recall / data.classAttribute().numValues();
-
+                        
             System.out.println("\nF-Score -> " + fm + "\n");
             System.out.println("Execution time: " + time + "\n");
 
             BufferedWriter csvWriter = new BufferedWriter(new FileWriter(savePath, true));
             
-            String header = "bbdd,algorithm,seed,folds,discretized,nTrees,featureSelection,baseClass,n,ensemble,boosting,RF,bagSize,score,fm,precision,recall,time(s)\n";
+            String header = "bbdd,algorithm,seed,folds,discretized,nTrees,featureSelection,baseClass,n,ensemble,bagSize,score,fm,precision,recall,probAciertos,probPredFallos,probRealFallos,time(s)\n";
             csvWriter.append(header);
             
             String output = params[0] + "," + params[1] + "," + params[2] + ","
@@ -483,7 +512,8 @@ public class singleExperiment {
                     + params[6] + "," + params[7] + "," + params[8] + ","
                     + params[9] + "," + params[10] + "," + params[11] + ","
                     + evaluation.pctCorrect() + "," + fm + "," + precision + ","
-                    + recall + "," + time + "\n";
+                    + recall + "," + probAciertos + ',' + probFallos[0] + ','
+                    + probFallos[1] + ',' + time + "\n";
             csvWriter.append(output);
 
             System.out.println("Results saved at: " + savePath);
