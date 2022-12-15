@@ -504,7 +504,7 @@ public class singleExperiment {
 
             BufferedWriter csvWriter = new BufferedWriter(new FileWriter(savePath, true));
             
-            String header = "bbdd,algorithm,seed,folds,discretized,nTrees,featureSelection,baseClass,n,ensemble,bagSize,score,fm,precision,recall,probAciertos,probPredFallos,probRealFallos,time(s)\n";
+            String header = "bbdd,algorithm,seed,folds,discretized,nTrees,featureSelection,baseClass,n,ensemble,bagSize,porNB,score,fm,precision,recall,probAciertos,probPredFallos,probRealFallos,time(s)\n";
             csvWriter.append(header);
             
             String output = params[0] + "," + params[1] + "," + params[2] + ","
