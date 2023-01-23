@@ -90,7 +90,7 @@
             <archive>
               <manifest>
               	<addClasspath>true</addClasspath>
-                <mainClass>org.albacete.simd.experiments.singleExperiment</mainClass>
+                <mainClass>org.albacete.simd.experiments.cvExperiment</mainClass>
               </manifest>
             </archive>
             <descriptorRefs>

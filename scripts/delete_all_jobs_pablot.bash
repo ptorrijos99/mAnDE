@@ -1,4 +1,4 @@
 #!/bin/bash
-qselect -u pablot | xargs qdel
+qselect -u pablo.torrijos | xargs qdel
 
-qselect -u pablot | xargs qdel -W force
+qselect -u pablo.torrijos | xargs qdel -W force

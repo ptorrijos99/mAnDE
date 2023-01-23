@@ -155,7 +155,7 @@ public class mAnDE extends AbstractClassifier implements
      */
     private int n = 1;
     
-    private double addNB = 0;
+    private double addNB = 0.4;
     
     /**
      * Minimum number of Instances to create a tree.
@@ -203,20 +203,23 @@ public class mAnDE extends AbstractClassifier implements
         
         // If we have not created mSPnDE's
         if (mSPnDEs.isEmpty()) {
-            HashSet<String> done = new HashSet();
+            HashSet<String> done = new HashSet<>();
             done.add(getEnsemble());
             
             setBagSize(100);
             setBaseClass("J48");
+            setAddNB(0.4);
             
             String[] posClassifiers = {"Bagging", "RF", "Boosting"};
 
             // We try with Bagging, RF and Boosting
             for (int i = 0; i < posClassifiers.length; i++) {
-                if (!done.contains(posClassifiers[i])) {
-                    setEnsemble(posClassifiers[i]);
-                    done.add(posClassifiers[i]);
+                if (done.contains(posClassifiers[i])) {
+                    continue;
                 }
+
+                setEnsemble(posClassifiers[i]);
+                done.add(posClassifiers[i]);
 
                 // Try to build the mSPnDEs with the new configuration
                 try {
@@ -257,8 +260,23 @@ public class mAnDE extends AbstractClassifier implements
 
         // We free up the discretised data space
         data.delete();
-
-        //nSPnDEs_variables();
+        
+        // Print data of mSPnDEs created
+        /*double var = 0;
+        double max = 0;
+        double min = Double.POSITIVE_INFINITY;
+        for (mSPnDE a : mSPnDEs.values()) {
+            if (a.getNChildren() > max) 
+                max = a.getNChildren();
+            if (a.getNChildren() < min)
+                min = a.getNChildren();
+            var += a.getNChildren();
+        }
+        System.out.println("mSPnDEs," 
+                + mSPnDEs.size() 
+                + "," + (var/mSPnDEs.size())
+                + "," + max
+                + "," + min);*/
     }
 
     /**
@@ -396,22 +414,6 @@ public class mAnDE extends AbstractClassifier implements
             base.buildClassifier(data);
             graphToSPnDE(treeParser(base));
         }
-
-        double var = 0;
-        double max = 0;
-        double min = Double.POSITIVE_INFINITY;
-        for (mSPnDE a : mSPnDEs.values()) {
-            if (a.getNChildren() > max) 
-                max = a.getNChildren();
-            if (a.getNChildren() < min)
-                min = a.getNChildren();
-            var += a.getNChildren();
-        }
-        System.out.println("mSPnDEs," 
-                + mSPnDEs.size() 
-                + "," + (var/mSPnDEs.size())
-                + "," + max
-                + "," + min);
     }
 
     /**

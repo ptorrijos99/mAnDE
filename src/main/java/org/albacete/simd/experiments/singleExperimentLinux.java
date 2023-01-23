@@ -86,14 +86,14 @@ import weka.classifiers.evaluation.Prediction;
 
 import org.albacete.simd.mAnDE.mAnDE;
 
-public class singleExperiment {
+public class singleExperimentLinux {
     
     static Random random;
     static int folds;
 
     public static void main(String[] args) throws Exception {
         // Reading arguments
-        int index = Integer.parseInt(args[0]);
+        /*int index = Integer.parseInt(args[0]);
         String paramsFile = args[1];
 
         // Reading parameters
@@ -111,7 +111,22 @@ public class singleExperiment {
             params = line.split(" ");
         } catch (FileNotFoundException e) {
             System.out.println(e);
-        }
+        }*/
+        String[] params = new String[12];
+        params[0] = "Breast_GSE26910.arff";
+        params[1] = "mAnDE";
+        params[2] = "2";
+        params[3] = "3";
+        params[4] = "false";
+        params[5] = "100";
+        params[6] = "none";
+        params[7] = "J48";
+        params[8] = "2";
+        params[9] = "Bagging";
+        params[10] = "100";
+        params[11] = "0";
+        
+        
 
         // Getting params from line: bbdd, algorithm, seed, folds, discretized, 
         // nTrees, featureSelection, baseClas, (n, ensemble, boosting, RF, bagSize)
@@ -223,6 +238,7 @@ public class singleExperiment {
                 
             case "AdaBoost":
                 clas = new AdaBoostM1();
+                ((AdaBoostM1)clas).setOptions(options);
                 
                 switch (params[7]) {
                     case "REPTree":
@@ -320,7 +336,6 @@ public class singleExperiment {
             // Other algorithms
             case "KNN":
                 clas = new IBk();
-                ((IBk)clas).setKNN(nTrees);
                 break;
                 
             default:
@@ -420,9 +435,9 @@ public class singleExperiment {
         // Read bbdd
         //ConverterUtils.DataSource loader = new ConverterUtils.DataSource("/res/bbdd/" + bbdd + ".arff");
         
-        ConverterUtils.DataSource loader = new ConverterUtils.DataSource("res/bbdd/" + bbdd);
+        //ConverterUtils.DataSource loader = new ConverterUtils.DataSource("res/bbdd/" + bbdd);
 
-        //ConverterUtils.DataSource loader = new ConverterUtils.DataSource("/tmp/res/bbdd/" + bbdd);
+        ConverterUtils.DataSource loader = new ConverterUtils.DataSource("/tmp/res/bbdd/" + bbdd);
 
         Instances data = loader.getDataSet();
         data.setClassIndex(data.numAttributes()-1);
