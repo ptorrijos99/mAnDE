@@ -82,7 +82,7 @@ public class mAnDE extends AbstractClassifier implements
     /**
      * HashMap containing the mSPnDEs.
      */
-    private ConcurrentHashMap<Integer, mSPnDE> mSPnDEs;
+    private ConcurrentHashMap<String, mSPnDE> mSPnDEs;
 
     /**
      * HashMap to convert from variable name to index.
@@ -254,7 +254,7 @@ public class mAnDE extends AbstractClassifier implements
             for (int i = 0; i < varNumValues.length; i++) {
                 varNumValues[i] = data.attribute(i).numValues();
             }
-
+            
             calculateTables_mSPnDEs();
         }
 
@@ -406,9 +406,25 @@ public class mAnDE extends AbstractClassifier implements
                     throw new Exception("Ensemble type not supported");
             }
             
-            trees.parallelStream().forEach((tree) -> {
+            trees.stream().forEach((tree) -> {
                 graphToSPnDE(treeParser(tree));
             });
+            
+            if (getN() == 3) {
+                HashMap<String, HashSet<String>> childrenMap = new HashMap<>();
+                trees.stream().forEach((tree) -> {
+                    toSP2DE_children(treeParser(tree), childrenMap);
+                });
+                
+                mSPnDEs.values().forEach((sp2de) -> {
+                    HashSet<String> children = childrenMap.get(((mSP2DE)sp2de).xi1_s);
+                    sp2de.moreChildren(new ArrayList<>(children));
+                    int ch = children.size();
+
+                    children = childrenMap.get(((mSP2DE)sp2de).xi2_s);
+                    sp2de.moreChildren(new ArrayList<>(children));
+                });
+            }
             
         } else {
             base.buildClassifier(data);
@@ -524,23 +540,27 @@ public class mAnDE extends AbstractClassifier implements
      * Converts a HashMap<String,Node> to a representation of mAnDE.
      */
     private void graphToSPnDE(HashMap<String, Node> nodes) {
-        if (getN() == 1) {
-            nodes.values().forEach((node) -> {
-                node.getChildren().values().forEach((child) -> {
-                    if (!node.getName().equals("") && !child.getName().equals("")) {
-                        toSP1DE(node.getName(), child.getName());
-                    }
-                });
-            });
-        } else if (getN() == 2) {
-            nodes.values().forEach((node) -> {
-                node.getChildren().values().forEach((child) -> {
-                    if (!node.getName().equals("") && !child.getName().equals("")) {
-                        toSP2DE(node.getName(), child.getName(), node.getParent().getName(),
-                            node.getChildrenArray(child.getName()), child.getChildrenArray());
-                    }
-                });
-            });
+        switch (getN()) {
+            case 1:
+                nodes.values().forEach((node) -> {
+                    node.getChildren().values().forEach((child) -> {
+                        if (!node.getName().equals("") && !child.getName().equals("")) {
+                            toSP1DE(node.getName(), child.getName());
+                        }
+                    });
+                }); break;
+            case 2:
+            case 3:
+                nodes.values().forEach((node) -> {
+                    node.getChildren().values().forEach((child) -> {
+                        if (!node.getName().equals("") && !child.getName().equals("")) {
+                            toSP2DE(node.getName(), child.getName(), node.getParent().getName(),
+                                    node.getChildrenArray(child.getName()), child.getChildrenArray());
+                        }
+                    });
+                }); break;
+            default:
+                break;
         }
     }
 
@@ -553,16 +573,16 @@ public class mAnDE extends AbstractClassifier implements
      */
     private void toSP1DE(String parent, String child) {
         if (!parent.equals(child)) {
-            if (!mSPnDEs.containsKey(parent.hashCode())) {
-                mSPnDEs.put(parent.hashCode(), new mSP1DE(parent));
+            if (!mSPnDEs.containsKey(parent)) {
+                mSPnDEs.put(parent, new mSP1DE(parent));
             }
             if (!child.equals("")) {
-                if (!mSPnDEs.containsKey(child.hashCode())) {
-                    mSPnDEs.put(child.hashCode(), new mSP1DE(child));
+                if (!mSPnDEs.containsKey(child)) {
+                    mSPnDEs.put(child, new mSP1DE(child));
                 }
                 try {
-                    ((mSP1DE) mSPnDEs.get(parent.hashCode())).moreChildren(child);
-                    ((mSP1DE) mSPnDEs.get(child.hashCode())).moreChildren(parent);
+                    ((mSP1DE) mSPnDEs.get(parent)).moreChildren(child);
+                    ((mSP1DE) mSPnDEs.get(child)).moreChildren(parent);
                 } catch (NullPointerException ex) {
                 }
             }
@@ -582,12 +602,17 @@ public class mAnDE extends AbstractClassifier implements
      */
     private void toSP2DE(String parent, String child, String grandparent,
             ArrayList<String> brothers, ArrayList<String> grandchildren) {
-        if (!parent.equals(child)) {
-            if (!mSPnDEs.containsKey(parent.hashCode() + child.hashCode())) {
-                mSPnDEs.put(parent.hashCode() + child.hashCode(), new mSP2DE(parent, child));
+        int compare = parent.compareTo(child);
+        if (!(compare == 0)) {
+            String key;
+            if (compare > 0) key = parent + child;
+            else key = child + parent;
+            
+            if (!mSPnDEs.containsKey(key)) {
+                mSPnDEs.put(key, new mSP2DE(parent, child));
             }
             try {
-                mSP2DE elem = ((mSP2DE) mSPnDEs.get(parent.hashCode() + child.hashCode()));
+                mSP2DE elem = ((mSP2DE) mSPnDEs.get(key));
                 if (!grandparent.equals(parent)) {
                     elem.moreChildren(grandparent);
                 }
@@ -596,6 +621,30 @@ public class mAnDE extends AbstractClassifier implements
             } catch (NullPointerException ex) {
             }
         }
+    }
+    
+    /**
+     * Add the children to the mSP2DEs
+     *
+     * @param parent Name of the parent in the mSP2DE.
+     * @param child Name of the child in the mSP2DE.
+     */
+    private void toSP2DE_children(HashMap<String, Node> nodes, HashMap<String, HashSet<String>> childrenMap) {
+        nodes.values().forEach((node) -> {
+            node.getChildren().values().forEach((child) -> {
+                if (!node.getName().equals("") && !child.getName().equals("")) {
+                            
+                    if (!childrenMap.containsKey(node.getName())) {
+                        childrenMap.put(node.getName(), new HashSet<>());
+                    }
+                    if (!childrenMap.containsKey(child.getName())) {
+                        childrenMap.put(child.getName(), new HashSet<>());
+                    }
+                    childrenMap.get(node.getName()).add(child.getName());
+                    childrenMap.get(child.getName()).add(node.getName());
+                 }
+            });
+        }); 
     }
 
     /**
@@ -609,7 +658,6 @@ public class mAnDE extends AbstractClassifier implements
         list.parallelStream().forEach((spode) -> {
             spode.buildTables();
         });
-        
     }
 
     /**
@@ -665,7 +713,7 @@ public class mAnDE extends AbstractClassifier implements
      * @param n The n hyperparameter to be set
      */
     public void setN(int n) {
-        if (n > 0 && n < 3) {
+        if (n > 0 && n <= 3) {
             this.n = n;
         }
     }

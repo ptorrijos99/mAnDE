@@ -38,6 +38,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.Random;
+import org.albacete.simd.mAnDE.Discretize2Times;
 
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
@@ -124,7 +125,7 @@ public class singleExperiment {
         
         folds = Integer.parseInt(params[3]);
       
-        boolean discretized = Boolean.parseBoolean(params[4]);
+        String discretized = params[4];
         
         int nTrees = Integer.parseInt(params[5]); 
         
@@ -329,15 +330,103 @@ public class singleExperiment {
                     + "NB, TAN or SVM...\n value of alg: " + alg);
         }
         
-        // Create a pipeline that first discretize the data, and then execute the algorithm
-        if (discretized) {
-            FilteredClassifier fc = new FilteredClassifier();
-            Discretize discretizer = new Discretize();
-            
-            fc.setFilter(discretizer);
-            fc.setClassifier(clas);
-            
-            clas = fc;
+        if (null != discretized) // Create a pipeline that first discretize the data, and then execute the algorithm
+        switch (discretized) {
+            case "FeI":{
+                FilteredClassifier fc = new FilteredClassifier();
+                Discretize discretizer = new Discretize();
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "EW5":{
+                FilteredClassifier fc = new FilteredClassifier();
+                weka.filters.unsupervised.attribute.Discretize discretizer = 
+                        new weka.filters.unsupervised.attribute.Discretize();
+                
+                discretizer.setBins(5);
+                discretizer.setUseEqualFrequency(false);
+                
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "EW10":{
+                FilteredClassifier fc = new FilteredClassifier();
+                weka.filters.unsupervised.attribute.Discretize discretizer = 
+                        new weka.filters.unsupervised.attribute.Discretize();
+               
+                discretizer.setBins(10);
+                discretizer.setUseEqualFrequency(false);
+                
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "EF5":{
+                FilteredClassifier fc = new FilteredClassifier();
+                weka.filters.unsupervised.attribute.Discretize discretizer = 
+                        new weka.filters.unsupervised.attribute.Discretize();
+                
+                discretizer.setBins(5);
+                discretizer.setUseEqualFrequency(true);
+                
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "EF10":{
+                FilteredClassifier fc = new FilteredClassifier();
+                weka.filters.unsupervised.attribute.Discretize discretizer = 
+                        new weka.filters.unsupervised.attribute.Discretize();
+                
+                discretizer.setBins(10);
+                discretizer.setUseEqualFrequency(true);
+                
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            // Nuevos
+            case "FeI2":{
+                FilteredClassifier fc = new FilteredClassifier();
+                Discretize2Times discretizer = new Discretize2Times(2);
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "FeI4":{
+                FilteredClassifier fc = new FilteredClassifier();
+                Discretize2Times discretizer = new Discretize2Times(4);
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "FeI5":{
+                FilteredClassifier fc = new FilteredClassifier();
+                Discretize2Times discretizer = new Discretize2Times(5);
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "FeI10":{
+                FilteredClassifier fc = new FilteredClassifier();
+                Discretize2Times discretizer = new Discretize2Times(10);
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            default:
+                break;
         }
         
         AttributeSelectedClassifier asc = null;
@@ -453,6 +542,7 @@ public class singleExperiment {
         if(file.length() == 0) {
             double init = System.currentTimeMillis();
 
+            if (folds == 0) folds = data.numInstances();
             Evaluation evaluation = new Evaluation(data);
             evaluation.crossValidateModel(clas, data, folds, random, new Object[]{});
 

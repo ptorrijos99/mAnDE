@@ -44,7 +44,7 @@ public class mSP2DE implements mSPnDE, Serializable {
     /**
      * Name of the first Super-Parent of the mSP2DE.
      */
-    private final String xi1_s;
+    protected final String xi1_s;
 
     /**
      * ID of the first Super-Parent of the mSP2DE.
@@ -54,7 +54,7 @@ public class mSP2DE implements mSPnDE, Serializable {
     /**
      * Name of the second Super-Parent of the mSP2DE.
      */
-    private final String xi2_s;
+    protected final String xi2_s;
 
     /**
      * ID of the second Super-Parent of the mSP2DE.
@@ -181,7 +181,7 @@ public class mSP2DE implements mSPnDE, Serializable {
                 res[i] /= sum;
             }
         }
-
+        
         return res;
     }
 
@@ -192,7 +192,9 @@ public class mSP2DE implements mSPnDE, Serializable {
      */
     @Override
     public void moreChildren(String child) {
-        if (!child.equals("")) {
+        if ((!child.equals("")) &&
+                (!child.equals(xi1_s)) &&
+                (!child.equals(xi2_s))) {
             listChildren.add(child);
         }
     }
@@ -205,9 +207,7 @@ public class mSP2DE implements mSPnDE, Serializable {
     @Override
     public void moreChildren(ArrayList<String> children) {
         children.forEach((child) -> {
-            if (!child.equals("")) {
-                listChildren.add(child);
-            }
+            moreChildren(child);
         });
     }
 

@@ -38,6 +38,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.Random;
+import org.albacete.simd.mAnDE.Discretize2Times;
 
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
@@ -85,6 +86,8 @@ import weka.classifiers.evaluation.NominalPrediction;
 import weka.classifiers.evaluation.Prediction;
 
 import org.albacete.simd.mAnDE.mAnDE;
+import weka.core.converters.ConverterUtils.DataSink;
+import weka.filters.Filter;
 
 public class singleExperimentLinux {
     
@@ -113,12 +116,12 @@ public class singleExperimentLinux {
             System.out.println(e);
         }*/
         String[] params = new String[12];
-        params[0] = "Breast_GSE26910.arff";
-        params[1] = "mAnDE";
+        params[0] = "MLL.arff";
+        params[1] = "Bagging";
         params[2] = "2";
-        params[3] = "3";
-        params[4] = "false";
-        params[5] = "100";
+        params[3] = "0";
+        params[4] = "FeI2";
+        params[5] = "50";
         params[6] = "none";
         params[7] = "J48";
         params[8] = "2";
@@ -139,7 +142,7 @@ public class singleExperimentLinux {
         
         folds = Integer.parseInt(params[3]);
       
-        boolean discretized = Boolean.parseBoolean(params[4]);
+        String discretized = params[4];
         
         int nTrees = Integer.parseInt(params[5]); 
         
@@ -345,14 +348,103 @@ public class singleExperimentLinux {
         }
         
         // Create a pipeline that first discretize the data, and then execute the algorithm
-        if (discretized) {
-            FilteredClassifier fc = new FilteredClassifier();
-            Discretize discretizer = new Discretize();
-            
-            fc.setFilter(discretizer);
-            fc.setClassifier(clas);
-            
-            clas = fc;
+        if (null != discretized) // Create a pipeline that first discretize the data, and then execute the algorithm
+        switch (discretized) {
+            case "FeI":{
+                FilteredClassifier fc = new FilteredClassifier();
+                Discretize discretizer = new Discretize();
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "EW5":{
+                FilteredClassifier fc = new FilteredClassifier();
+                weka.filters.unsupervised.attribute.Discretize discretizer = 
+                        new weka.filters.unsupervised.attribute.Discretize();
+                
+                discretizer.setBins(5);
+                discretizer.setUseEqualFrequency(false);
+                
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "EW10":{
+                FilteredClassifier fc = new FilteredClassifier();
+                weka.filters.unsupervised.attribute.Discretize discretizer = 
+                        new weka.filters.unsupervised.attribute.Discretize();
+               
+                discretizer.setBins(10);
+                discretizer.setUseEqualFrequency(false);
+                
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "EF5":{
+                FilteredClassifier fc = new FilteredClassifier();
+                weka.filters.unsupervised.attribute.Discretize discretizer = 
+                        new weka.filters.unsupervised.attribute.Discretize();
+                
+                discretizer.setBins(5);
+                discretizer.setUseEqualFrequency(true);
+                
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "EF10":{
+                FilteredClassifier fc = new FilteredClassifier();
+                weka.filters.unsupervised.attribute.Discretize discretizer = 
+                        new weka.filters.unsupervised.attribute.Discretize();
+                
+                discretizer.setBins(10);
+                discretizer.setUseEqualFrequency(true);
+                
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            // Nuevos
+            case "FeI2":{
+                FilteredClassifier fc = new FilteredClassifier();
+                Discretize2Times discretizer = new Discretize2Times(2);
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "FeI4":{
+                FilteredClassifier fc = new FilteredClassifier();
+                Discretize2Times discretizer = new Discretize2Times(4);
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "FeI5":{
+                FilteredClassifier fc = new FilteredClassifier();
+                Discretize2Times discretizer = new Discretize2Times(5);
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            case "FeI10":{
+                FilteredClassifier fc = new FilteredClassifier();
+                Discretize2Times discretizer = new Discretize2Times(10);
+                fc.setFilter(discretizer);
+                fc.setClassifier(clas);
+                clas = fc;
+                    break;
+                }
+            default:
+                break;
         }
         
         AttributeSelectedClassifier asc = null;
@@ -437,7 +529,7 @@ public class singleExperimentLinux {
         
         //ConverterUtils.DataSource loader = new ConverterUtils.DataSource("res/bbdd/" + bbdd);
 
-        ConverterUtils.DataSource loader = new ConverterUtils.DataSource("/tmp/res/bbdd/" + bbdd);
+        ConverterUtils.DataSource loader = new ConverterUtils.DataSource("../MICROARRAYS/" + bbdd);
 
         Instances data = loader.getDataSet();
         data.setClassIndex(data.numAttributes()-1);
@@ -468,6 +560,7 @@ public class singleExperimentLinux {
         if(file.length() == 0) {
             double init = System.currentTimeMillis();
 
+            if (folds == 0) folds = data.numInstances();
             Evaluation evaluation = new Evaluation(data);
             evaluation.crossValidateModel(clas, data, folds, random, new Object[]{});
 

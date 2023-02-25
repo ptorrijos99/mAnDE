@@ -44,7 +44,7 @@ public class mSP1DE implements mSPnDE, Serializable {
     /**
      * Nombre del Super-Parent del mSP1DE.
      */
-    private final String xi_s;
+    protected final String xi_s;
 
     /**
      * ID of the Super-Parent of the mSP1DE.
@@ -173,7 +173,8 @@ public class mSP1DE implements mSPnDE, Serializable {
      */
     @Override
     public void moreChildren(String child) {
-        if (!child.equals("")) {
+        if ((!child.equals("")) &&
+                (!child.equals(xi_s))) {
             listChildren.add(child);
         }
     }
@@ -186,9 +187,7 @@ public class mSP1DE implements mSPnDE, Serializable {
     @Override
     public void moreChildren(ArrayList<String> children) {
         children.forEach((child) -> {
-            if (!child.equals("")) {
-                listChildren.add(child);
-            }
+            moreChildren(child);
         });
     }
 

@@ -39,6 +39,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.Arrays;
 import java.util.Random;
+import org.albacete.simd.mAnDE.Discretize2Times;
 
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
@@ -46,17 +47,15 @@ import weka.core.converters.ConverterUtils;
 import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Evaluation;
 
-import weka.classifiers.evaluation.NominalPrediction;
-import weka.classifiers.evaluation.Prediction;
 
 import org.albacete.simd.mAnDE.mAnDE;
+import weka.classifiers.bayes.AveragedNDependenceEstimators.A1DE;
+import weka.classifiers.bayes.AveragedNDependenceEstimators.A2DE;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.meta.Bagging;
 import weka.classifiers.meta.FilteredClassifier;
-import weka.classifiers.sklearn.ScikitLearnClassifier;
 import weka.classifiers.trees.J48;
 import weka.classifiers.trees.RandomForest;
-import weka.filters.supervised.attribute.Discretize;
 
 public class cvExperiment {
     
@@ -65,7 +64,7 @@ public class cvExperiment {
     static Instances data;
     static String[] args;
     static String [] params;
-    
+    static String discretized;
     
 
     public static void main(String[] args) throws Exception {
@@ -75,7 +74,7 @@ public class cvExperiment {
         int index = Integer.parseInt(args[0]);
         String paramsFile = args[1];
 
-        // Reading parameters
+        /*// Reading parameters
         try (BufferedReader br = new BufferedReader(new FileReader(paramsFile))) {
             // Reading index line
             String line;
@@ -88,8 +87,14 @@ public class cvExperiment {
             params = line.split(" ");
         } catch (FileNotFoundException e) {
             System.out.println(e);
-        }
-
+        }*/
+        params = new String[5];
+        params[0] = "MLL.arff";
+        params[1] = "RF";
+        params[2] = "5";
+        params[3] = "FeI2";
+        params[4] = "2";
+        
         // Getting params from line: bbdd, algorithm, seed, folds, discretized, 
         // nTrees, featureSelection, baseClas, (n, ensemble, boosting, RF, bagSize)
         String bbdd = params[0];
@@ -97,6 +102,8 @@ public class cvExperiment {
         random = new Random(42);  
         
         folds = Integer.parseInt(params[2]);
+        
+        discretized = params[3];
 
         // Read data
         data = readData(bbdd);
@@ -124,7 +131,7 @@ public class cvExperiment {
         // Set name of the save file
         savePath = "experiment_results_" 
                 + params[0] + "_" + params[1] + "_" + params[2] + "_" 
-                + params[3] + ".csv";
+                + params[3] + "_" + params[4] + ".csv";
         
         System.out.println(savePath + "\n");
         
@@ -146,15 +153,25 @@ public class cvExperiment {
             
             double briefScore = 0;
             int[][] matriz = new int[numValClass][numValClass];
+            
+            double timeExternal = 0;
 
             for (int i = 0; i < foldsExterna; i++) {
                 Instances train = data.trainCV(foldsExterna, i);
                 Instances test = data.testCV(foldsExterna, i);
-
+                
                 AbstractClassifier bestModel = cvInterna(train);
+                
+                
+                double initExternal = System.currentTimeMillis();
                 
                 bestModel.buildClassifier(train);
                 double[] prediction = bestModel.distributionForInstance(test.firstInstance());
+                
+                timeExternal += (System.currentTimeMillis() - initExternal);
+                System.out.println("TIME EXTERNAL: " + (System.currentTimeMillis() - initExternal));
+                
+                
                 int posReal = (int)(test.firstInstance().classValue());
                 
                 // maxAt: Posición de la máxima probabilidad
@@ -196,6 +213,7 @@ public class cvExperiment {
             }
             
             double time = ((System.currentTimeMillis() - init) / foldsExterna) / 1000;
+            double time2 = (timeExternal / foldsExterna) / 1000;
 
             briefScore /= foldsExterna;
             
@@ -250,13 +268,13 @@ public class cvExperiment {
 
             BufferedWriter csvWriter = new BufferedWriter(new FileWriter(savePath, true));
             
-            String header = "bbdd,algorithm,folds,n,score,fm,precision,recall,probAciertos,probPredFallos,probRealFallos,briefScore,time(s)\n";
+            String header = "bbdd,algorithm,folds,discretized,n,score,fm,precision,recall,probAciertos,probPredFallos,probRealFallos,briefScore,time(s),timeExternal\n";
             csvWriter.append(header);
             
-            String output = params[0] + "," + params[1] + "," + params[2] + "," + params[3] + ","
+            String output = params[0] + "," + params[1] + "," + params[2] + "," + params[3] + "," + params[4] + ","
                     + pctCorrect + "," + fm + "," + precision + ","
                     + recall + "," + probAciertos + ',' + probFallos0 + ','
-                    + probFallos1 + ',' + briefScore + ',' + time + "\n";
+                    + probFallos1 + ',' + briefScore + ',' + time + ',' + time2 + "\n";
             csvWriter.append(output);
 
             System.out.println("Results saved at: " + savePath);
@@ -270,7 +288,7 @@ public class cvExperiment {
     
     public static AbstractClassifier cvInterna(Instances train) throws Exception {
         int[] nTrees = {50, 100, 150, 200};
-        double[] porNBs = {0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4};
+        double[] porNBs = {0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4};
         
         String algorithm = params[1];
         
@@ -289,6 +307,9 @@ public class cvExperiment {
         String[] optionsSkL = new String[2];
         optionsSkL[0] = "-learner";
         
+        FilteredClassifier fc;
+        Discretize2Times discretizer;
+        
         switch (algorithm) {
             case "mAnDE":
                 for (int nTree : nTrees) {
@@ -296,14 +317,38 @@ public class cvExperiment {
                         mAnDE clas = new mAnDE();
                         clas.setAddNB(porNB);
                         clas.setnTrees(nTree);
-                        clas.setN(Integer.parseInt(params[2]));
+                        clas.setN(Integer.parseInt(params[4]));
+                        
+                        fc = new FilteredClassifier();
+                        
+                            switch (discretized) {
+                                case "FeI2":
+                                    discretizer = new Discretize2Times(2);
+                                    break;
+                                case "FeI4":
+                                    discretizer = new Discretize2Times(4);
+                                    break;
+                                case "FeI5":
+                                    discretizer = new Discretize2Times(5);
+                                    break;
+                                case "FeI10":
+                                    discretizer = new Discretize2Times(10);
+                                    break;
+                                default:
+                                    discretizer = new Discretize2Times(10);
+                                    break;
+                            }
+
+                        fc.setFilter(discretizer);
+                        fc.setClassifier(clas);
+
                         
                         Evaluation evaluation = new Evaluation(train);
-                        evaluation.crossValidateModel(clas, train, folds, random, new Object[]{});
+                        evaluation.crossValidateModel(fc, train, folds, random, new Object[]{});
                         
                         if (evaluation.pctCorrect() > bestScore) {
                             bestScore = evaluation.pctCorrect();
-                            result = clas;
+                            result = fc;
                         }
                     }
                 }   
@@ -313,14 +358,37 @@ public class cvExperiment {
                     mAnDE clas = new mAnDE();
                     clas.setAddNB(0);
                     clas.setnTrees(nTree);
-                    clas.setN(Integer.parseInt(params[2]));
+                    clas.setN(Integer.parseInt(params[4]));
+                    
+                    fc = new FilteredClassifier();
+
+                            switch (discretized) {
+                                case "FeI2":
+                                    discretizer = new Discretize2Times(2);
+                                    break;
+                                case "FeI4":
+                                    discretizer = new Discretize2Times(4);
+                                    break;
+                                case "FeI5":
+                                    discretizer = new Discretize2Times(5);
+                                    break;
+                                case "FeI10":
+                                    discretizer = new Discretize2Times(10);
+                                    break;
+                                default:
+                                    discretizer = new Discretize2Times(10);
+                                    break;
+                            }
+
+                        fc.setFilter(discretizer);
+                        fc.setClassifier(clas);
 
                     Evaluation evaluation = new Evaluation(train);
-                    evaluation.crossValidateModel(clas, train, folds, random, new Object[]{});
+                    evaluation.crossValidateModel(fc, train, folds, random, new Object[]{});
 
                     if (evaluation.pctCorrect() > bestScore) {
                         bestScore = evaluation.pctCorrect();
-                        result = clas;
+                        result = fc;
                     }
                 }   
                 break;
@@ -330,27 +398,46 @@ public class cvExperiment {
                     clas.setOptions(options);
                     clas.setClassifier(new J48());
                     clas.setNumIterations(nTree);
-
-                    Evaluation evaluation = new Evaluation(train);
-                    evaluation.crossValidateModel(clas, train, folds, random, new Object[]{});
-
-                    if (evaluation.pctCorrect() > bestScore) {
-                        bestScore = evaluation.pctCorrect();
-                        result = clas;
-                    }
                     
-                    FilteredClassifier fc = new FilteredClassifier();
-                    Discretize discretizer = new Discretize();
+                    if (discretized.equals("none")) {
+                        Evaluation evaluation = new Evaluation(train);
+                        evaluation.crossValidateModel(clas, train, folds, random, new Object[]{});
 
-                    fc.setFilter(discretizer);
-                    fc.setClassifier(clas);
+                        if (evaluation.pctCorrect() > bestScore) {
+                            bestScore = evaluation.pctCorrect();
+                            result = clas;
+                        }
+                    } else {
+                        fc = new FilteredClassifier();
 
-                    evaluation = new Evaluation(train);
-                    evaluation.crossValidateModel(fc, train, folds, random, new Object[]{});
+                            switch (discretized) {
+                                case "FeI2":
+                                    discretizer = new Discretize2Times(2);
+                                    break;
+                                case "FeI4":
+                                    discretizer = new Discretize2Times(4);
+                                    break;
+                                case "FeI5":
+                                    discretizer = new Discretize2Times(5);
+                                    break;
+                                case "FeI10":
+                                    discretizer = new Discretize2Times(10);
+                                    break;
+                                default:
+                                    discretizer = new Discretize2Times(10);
+                                    break;
+                            }
 
-                    if (evaluation.pctCorrect() > bestScore) {
-                        bestScore = evaluation.pctCorrect();
-                        result = fc;
+                        fc.setFilter(discretizer);
+                        fc.setClassifier(clas);
+
+                        Evaluation evaluation = new Evaluation(train);
+                        evaluation.crossValidateModel(fc, train, folds, random, new Object[]{});
+
+                        if (evaluation.pctCorrect() > bestScore) {
+                            bestScore = evaluation.pctCorrect();
+                            result = fc;
+                        }
                     }
                 }   
                 break;
@@ -359,32 +446,128 @@ public class cvExperiment {
                     RandomForest clas = new RandomForest();
                     clas.setOptions(options);
                     clas.setNumIterations(nTree);
-
-                    Evaluation evaluation = new Evaluation(train);
-                    evaluation.crossValidateModel(clas, train, folds, random, new Object[]{});
-
-                    if (evaluation.pctCorrect() > bestScore) {
-                        bestScore = evaluation.pctCorrect();
-                        result = clas;
-                    }
                     
-                    FilteredClassifier fc = new FilteredClassifier();
-                    Discretize discretizer = new Discretize();
+                    if (discretized.equals("none")) {
+                        Evaluation evaluation = new Evaluation(train);
+                        evaluation.crossValidateModel(clas, train, folds, random, new Object[]{});
 
-                    fc.setFilter(discretizer);
-                    fc.setClassifier(clas);
+                        if (evaluation.pctCorrect() > bestScore) {
+                            bestScore = evaluation.pctCorrect();
+                            result = clas;
+                        }
+                    } else {
+                        fc = new FilteredClassifier();
+                        
+                        switch (discretized) {
+                            case "FeI2":
+                                discretizer = new Discretize2Times(2);
+                                break;
+                            case "FeI4":
+                                discretizer = new Discretize2Times(4);
+                                break;
+                            case "FeI5":
+                                discretizer = new Discretize2Times(5);
+                                break;
+                            case "FeI10":
+                                discretizer = new Discretize2Times(10);
+                                break;
+                            default:
+                                discretizer = new Discretize2Times(10);
+                                break;
+                        }
 
-                    evaluation = new Evaluation(train);
-                    evaluation.crossValidateModel(fc, train, folds, random, new Object[]{});
+                        fc.setFilter(discretizer);
+                        fc.setClassifier(clas);
 
-                    if (evaluation.pctCorrect() > bestScore) {
-                        bestScore = evaluation.pctCorrect();
-                        result = fc;
+                        Evaluation evaluation = new Evaluation(train);
+                        evaluation.crossValidateModel(fc, train, folds, random, new Object[]{});
+
+                        if (evaluation.pctCorrect() > bestScore) {
+                            bestScore = evaluation.pctCorrect();
+                            result = fc;
+                        }
                     }
+
                 }   
                 break;
             case "NB":
-                return new NaiveBayes();
+                fc = new FilteredClassifier();
+                
+                        switch (discretized) {
+                            case "FeI2":
+                                discretizer = new Discretize2Times(2);
+                                break;
+                            case "FeI4":
+                                discretizer = new Discretize2Times(4);
+                                break;
+                            case "FeI5":
+                                discretizer = new Discretize2Times(5);
+                                break;
+                            case "FeI10":
+                                discretizer = new Discretize2Times(10);
+                                break;
+                            default:
+                                discretizer = new Discretize2Times(10);
+                                break;
+                        }
+
+                        fc.setFilter(discretizer);
+                fc.setClassifier(new NaiveBayes());
+                
+                
+                return fc;
+            case "A1DE":
+                fc = new FilteredClassifier();
+                
+                        switch (discretized) {
+                            case "FeI2":
+                                discretizer = new Discretize2Times(2);
+                                break;
+                            case "FeI4":
+                                discretizer = new Discretize2Times(4);
+                                break;
+                            case "FeI5":
+                                discretizer = new Discretize2Times(5);
+                                break;
+                            case "FeI10":
+                                discretizer = new Discretize2Times(10);
+                                break;
+                            default:
+                                discretizer = new Discretize2Times(10);
+                                break;
+                        }
+
+                        fc.setFilter(discretizer);
+                fc.setClassifier(new A1DE());
+                
+                return fc;
+            
+            case "A2DE":
+                fc = new FilteredClassifier();
+                
+                        switch (discretized) {
+                            case "FeI2":
+                                discretizer = new Discretize2Times(2);
+                                break;
+                            case "FeI4":
+                                discretizer = new Discretize2Times(4);
+                                break;
+                            case "FeI5":
+                                discretizer = new Discretize2Times(5);
+                                break;
+                            case "FeI10":
+                                discretizer = new Discretize2Times(10);
+                                break;
+                            default:
+                                discretizer = new Discretize2Times(10);
+                                break;
+                        }
+
+                        fc.setFilter(discretizer);
+                fc.setClassifier(new A2DE());
+
+                return fc;
+                
             default:
                 break;
         }
