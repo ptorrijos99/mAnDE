@@ -32,7 +32,6 @@
 package org.albacete.simd.mAnDE;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Objects;
@@ -42,24 +41,19 @@ import weka.core.Utils;
 public class mSP1DE implements mSPnDE, Serializable {
 
     /**
-     * Nombre del Super-Parent del mSP1DE.
-     */
-    protected final String xi_s;
-
-    /**
      * ID of the Super-Parent of the mSP1DE.
      */
-    private final int xi_i;
+    private final int xi;
 
     /**
      * Link the name of the children of the mSP1DE with their probability table.
      */
-    private final HashMap<String, double[][][]> children;
+    private final HashMap<Integer, double[][][]> children;
 
     /**
      * List of children of the mSP1DE.
      */
-    private final HashSet<String> listChildren;
+    private final HashSet<Integer> listChildren;
 
     /**
      * Global probability table of the mSP1DE.
@@ -71,9 +65,8 @@ public class mSP1DE implements mSPnDE, Serializable {
      * 
      * @param xi Father variable
      */
-    public mSP1DE(String xi) {
-        this.xi_s = xi;
-        this.xi_i = mAnDE.nToI.get(xi);
+    public mSP1DE(int xi) {
+        this.xi = xi;
         this.listChildren = new HashSet<>();
         this.children = new HashMap<>();
     }
@@ -85,12 +78,12 @@ public class mSP1DE implements mSPnDE, Serializable {
     @Override
     public void buildTables() {
         this.globalProb = new double[mAnDE.classNumValues] //y
-                [mAnDE.varNumValues[xi_i]]; //Xi
+                [mAnDE.varNumValues[xi]]; //Xi
 
         listChildren.forEach((child) -> {
             this.children.put(child, new double[mAnDE.classNumValues] //y
-                    [mAnDE.varNumValues[xi_i]] //Xi
-                    [mAnDE.varNumValues[mAnDE.nToI.get(child)]]); //Xj
+                    [mAnDE.varNumValues[xi]] //Xi
+                    [mAnDE.varNumValues[child]]); //Xj
         });
 
         // Creation of the contigency tables
@@ -98,12 +91,11 @@ public class mSP1DE implements mSPnDE, Serializable {
             Instance inst = mAnDE.data.get(i);
 
             // Creation of the probability table P(y,Xi)
-            globalProb[(int) inst.value(mAnDE.y)][(int) inst.value(xi_i)] += 1;
+            globalProb[(int) inst.value(mAnDE.y)][(int) inst.value(xi)] += 1;
 
             // Creation of the probability table P(y,Xi)
-            children.forEach((String xj, double[][][] tablaXj) -> {
-                int xj_i = mAnDE.nToI.get(xj);
-                tablaXj[(int) inst.value(mAnDE.y)][(int) inst.value(xi_i)][(int) inst.value(xj_i)] += 1;
+            children.forEach((Integer xj, double[][][] tablaXj) -> {
+                tablaXj[(int) inst.value(mAnDE.y)][(int) inst.value(xi)][(int) inst.value(xj)] += 1;
             });
         }
 
@@ -115,7 +107,7 @@ public class mSP1DE implements mSPnDE, Serializable {
         }
 
         // Conversion to Conditional Probability Distribution
-        children.forEach((String xj, double[][][] tableXj) -> {
+        children.forEach((Integer xj, double[][][] tableXj) -> {
             double sum;
             for (double[][] tableXj_y : tableXj) {
                 for (double[] tableXj_y_xi : tableXj_y) {
@@ -139,7 +131,7 @@ public class mSP1DE implements mSPnDE, Serializable {
     @Override
     public double[] probsForInstance(Instance inst) {
         double[] res = new double[mAnDE.classNumValues];
-        double xi = inst.value(xi_i);
+        double xi = inst.value(this.xi);
 
         // We initialise the probability of each class value to P(y,xi).
         for (int i = 0; i < res.length; i++) {
@@ -149,9 +141,9 @@ public class mSP1DE implements mSPnDE, Serializable {
         /* For each child Xj, we multiply P(Xj|y,Xi) by the result 
          * accumulated for each of the values of the class
         */
-        children.forEach((String xj_s, double[][][] tablaXj) -> {
+        children.forEach((Integer xj, double[][][] tablaXj) -> {
             for (int i = 0; i < res.length; i++) {
-                res[i] *= tablaXj[i][(int) xi][(int) inst.value(mAnDE.nToI.get(xj_s))];
+                res[i] *= tablaXj[i][(int) xi][(int) inst.value(xj)];
             }
         });
 
@@ -172,23 +164,10 @@ public class mSP1DE implements mSPnDE, Serializable {
      * @param child Name of the variable to be added as a child.
      */
     @Override
-    public void moreChildren(String child) {
-        if ((!child.equals("")) &&
-                (!child.equals(xi_s))) {
+    public void moreChildren(int child) {
+        if ((child != -1) && !(child == xi)) {
             listChildren.add(child);
         }
-    }
-    
-    /**
-     * Add several variables as children in the mSP2DE.
-     *
-     * @param children Name of the variables to be added as children.
-     */
-    @Override
-    public void moreChildren(ArrayList<String> children) {
-        children.forEach((child) -> {
-            moreChildren(child);
-        });
     }
 
     /**
@@ -220,15 +199,13 @@ public class mSP1DE implements mSPnDE, Serializable {
 
         mSP1DE that = (mSP1DE) o;
         return super.equals(that)
-                && Objects.equals(this.xi_i, that.xi_i)
-                && Objects.equals(this.xi_s, that.xi_s);
+                && Objects.equals(this.xi, that.xi);
     }
 
     @Override
     public int hashCode() {
         int hash = 3;
-        hash = 47 * hash + Objects.hashCode(this.xi_s);
-        hash = 47 * hash + this.xi_i;
+        hash = 47 * hash + this.xi;
         return hash;
     }
 }

@@ -42,34 +42,24 @@ import weka.core.Utils;
 public class mSP2DE implements mSPnDE, Serializable {
 
     /**
-     * Name of the first Super-Parent of the mSP2DE.
-     */
-    protected final String xi1_s;
-
-    /**
      * ID of the first Super-Parent of the mSP2DE.
      */
-    private final int xi1_i;
-
-    /**
-     * Name of the second Super-Parent of the mSP2DE.
-     */
-    protected final String xi2_s;
+    private final int xi1;
 
     /**
      * ID of the second Super-Parent of the mSP2DE.
      */
-    private final int xi2_i;
+    private final int xi2;
 
     /**
      * Link the name of the children of the mSP2DE with their probability table.
      */
-    private final HashMap<String, double[][][][]> children;
+    private final HashMap<Integer, double[][][][]> children;
 
     /**
      * List of children of the mSP2DE.
      */
-    private final HashSet<String> listChildren;
+    private final HashSet<Integer> listChildren;
 
     /**
      * Overall probability table of the mSP2DE.
@@ -82,11 +72,9 @@ public class mSP2DE implements mSPnDE, Serializable {
      * @param xi1 Parent variable 1
      * @param xi2 Parent variable 2
      */
-    public mSP2DE(String xi1, String xi2) {
-        this.xi1_s = xi1;
-        this.xi2_s = xi2;
-        this.xi1_i = mAnDE.nToI.get(xi1);
-        this.xi2_i = mAnDE.nToI.get(xi2);
+    public mSP2DE(int xi1, int xi2) {
+        this.xi1 = xi1;
+        this.xi2 = xi2;
         this.listChildren = new HashSet<>();
         this.children = new HashMap<>();
     }
@@ -97,14 +85,14 @@ public class mSP2DE implements mSPnDE, Serializable {
     @Override
     public void buildTables() {
         this.globalProbs = new double[mAnDE.classNumValues] //y
-                [mAnDE.varNumValues[xi1_i]] //Xi1
-                [mAnDE.varNumValues[xi2_i]];    //Xi2
+                [mAnDE.varNumValues[xi1]] //Xi1
+                [mAnDE.varNumValues[xi2]];    //Xi2
 
         listChildren.forEach((child) -> {
             this.children.put(child, new double[mAnDE.classNumValues] //y
-                    [mAnDE.varNumValues[xi1_i]] //Xi1
-                    [mAnDE.varNumValues[xi2_i]] //Xi2
-                    [mAnDE.varNumValues[mAnDE.nToI.get(child)]]); //Xj
+                    [mAnDE.varNumValues[xi1]] //Xi1
+                    [mAnDE.varNumValues[xi2]] //Xi2
+                    [mAnDE.varNumValues[child]]); //Xj
         });
 
         // Creation of contingency tables
@@ -112,12 +100,11 @@ public class mSP2DE implements mSPnDE, Serializable {
             Instance inst = mAnDE.data.get(i);
 
             // Creation of the probability table P(y,Xi1,Xi2)
-            globalProbs[(int) inst.value(mAnDE.y)][(int) inst.value(xi1_i)][(int) inst.value(xi2_i)] += 1;
+            globalProbs[(int) inst.value(mAnDE.y)][(int) inst.value(xi1)][(int) inst.value(xi2)] += 1;
 
             // Creation of the probability table P(Xj|y,Xi1,Xi2)
-            children.forEach((String xj, double[][][][] tableXj) -> {
-                int xj_i = mAnDE.nToI.get(xj);
-                tableXj[(int) inst.value(mAnDE.y)][(int) inst.value(xi1_i)][(int) inst.value(xi2_i)][(int) inst.value(xj_i)] += 1;
+            children.forEach((Integer xj, double[][][][] tableXj) -> {
+                tableXj[(int) inst.value(mAnDE.y)][(int) inst.value(xi1)][(int) inst.value(xi2)][(int) inst.value(xj)] += 1;
             });
         }
 
@@ -131,7 +118,7 @@ public class mSP2DE implements mSPnDE, Serializable {
         }
 
         // Conversion to Conditional Probability Distribution
-        children.forEach((String xj, double[][][][] tableXj) -> {
+        children.forEach((Integer xj, double[][][][] tableXj) -> {
             double sum;
             for (double[][][] tableXj_y : tableXj) {
                 for (double[][] tableXj_y_xi1 : tableXj_y) {
@@ -157,8 +144,8 @@ public class mSP2DE implements mSPnDE, Serializable {
     @Override
     public double[] probsForInstance(Instance inst) {
         double[] res = new double[mAnDE.classNumValues];
-        double xi1 = inst.value(xi1_i);
-        double xi2 = inst.value(xi2_i);
+        double xi1 = inst.value(this.xi1);
+        double xi2 = inst.value(this.xi2);
 
         // We initialise the probability of each class value to P(y,xi).
         for (int i = 0; i < res.length; i++) {
@@ -168,9 +155,9 @@ public class mSP2DE implements mSPnDE, Serializable {
         /* For each child Xj, we multiply P(Xj|y,Xi1,Xi2) by the result 
          * accumulated for each of the values of the class
          */
-        children.forEach((String xj_s, double[][][][] tableXj) -> {
+        children.forEach((Integer xj, double[][][][] tableXj) -> {
             for (int i = 0; i < res.length; i++) {
-                res[i] *= tableXj[i][(int) xi1][(int) xi2][(int) inst.value(mAnDE.nToI.get(xj_s))];
+                res[i] *= tableXj[i][(int) xi1][(int) xi2][(int) inst.value(xj)];
             }
         });
 
@@ -191,25 +178,12 @@ public class mSP2DE implements mSPnDE, Serializable {
      * @param child Name of the variable to add as a child.
      */
     @Override
-    public void moreChildren(String child) {
-        if ((!child.equals("")) &&
-                (!child.equals(xi1_s)) &&
-                (!child.equals(xi2_s))) {
-            listChildren.add(child);
+    public void moreChildren(int child) {
+        if ((child != -1) && !(child == xi1) && !(child == xi2)) {
+            listChildren.add(child); 
         }
     }
 
-    /**
-     * Add several variables as children in the mSP2DE.
-     *
-     * @param children Name of the variables to be added as children.
-     */
-    @Override
-    public void moreChildren(ArrayList<String> children) {
-        children.forEach((child) -> {
-            moreChildren(child);
-        });
-    }
 
     /**
      * Returns the number of children of the mSP2DE.
@@ -239,21 +213,16 @@ public class mSP2DE implements mSPnDE, Serializable {
 
         mSP2DE that = (mSP2DE) o;
         return super.equals(that)
-                && ((Objects.equals(this.xi1_i, that.xi1_i)
-                && Objects.equals(this.xi1_s, that.xi1_s)
-                && Objects.equals(this.xi2_i, that.xi2_i)
-                && Objects.equals(this.xi2_s, that.xi2_s))
-                || (Objects.equals(this.xi1_i, that.xi2_i)
-                && Objects.equals(this.xi1_s, that.xi2_s)
-                && Objects.equals(this.xi2_i, that.xi1_i)
-                && Objects.equals(this.xi2_s, that.xi1_s)));
+                && ((Objects.equals(this.xi1, that.xi1)
+                && Objects.equals(this.xi2, that.xi2))
+                || (Objects.equals(this.xi1, that.xi2)
+                && Objects.equals(this.xi2, that.xi1)));
     }
 
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 19 * hash + Objects.hashCode(this.xi1_s) + Objects.hashCode(this.xi2_s);
-        hash = 19 * hash + this.xi1_i + this.xi2_i;
+        hash = 19 * hash + this.xi1 + this.xi2;
         return hash;
     }
 

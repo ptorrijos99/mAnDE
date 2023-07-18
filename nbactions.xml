@@ -12,8 +12,8 @@
             <properties>
                 <exec.vmArgs></exec.vmArgs>
                 <exec.args>${exec.vmArgs} -classpath %classpath ${exec.mainClass} ${exec.appArgs}</exec.args>
-                <exec.appArgs>1  'C:\Users\pablo\Desktop\hyperparams.txt'</exec.appArgs>
-                <exec.mainClass>org.albacete.simd.experiments.singleExperiment</exec.mainClass>
+                <exec.appArgs>0 "/home/pablo/Escritorio/Desktop/hyperparams.txt"</exec.appArgs>
+                <exec.mainClass>org.albacete.simd.experiments.singleExperimentLinux</exec.mainClass>
                 <exec.executable>java</exec.executable>
             </properties>
         </action>
@@ -29,8 +29,8 @@
             <properties>
                 <exec.vmArgs>-agentlib:jdwp=transport=dt_socket,server=n,address=${jpda.address}</exec.vmArgs>
                 <exec.args>${exec.vmArgs} -classpath %classpath ${exec.mainClass} ${exec.appArgs}</exec.args>
-                <exec.appArgs>1  'C:\Users\pablo\Desktop\hyperparams.txt'</exec.appArgs>
-                <exec.mainClass>org.albacete.simd.experiments.singleExperiment</exec.mainClass>
+                <exec.appArgs>0 "/home/pablo/Escritorio/Desktop/hyperparams.txt"</exec.appArgs>
+                <exec.mainClass>org.albacete.simd.experiments.singleExperimentLinux</exec.mainClass>
                 <exec.executable>java</exec.executable>
                 <jpda.listen>true</jpda.listen>
             </properties>
@@ -47,9 +47,9 @@
             <properties>
                 <exec.vmArgs></exec.vmArgs>
                 <exec.args>${exec.vmArgs} -classpath %classpath ${exec.mainClass} ${exec.appArgs}</exec.args>
-                <exec.mainClass>org.albacete.simd.experiments.singleExperiment</exec.mainClass>
+                <exec.mainClass>org.albacete.simd.experiments.singleExperimentLinux</exec.mainClass>
                 <exec.executable>java</exec.executable>
-                <exec.appArgs>1  'C:\Users\pablo\Desktop\hyperparams.txt'</exec.appArgs>
+                <exec.appArgs>0 "/home/pablo/Escritorio/Desktop/hyperparams.txt"</exec.appArgs>
             </properties>
         </action>
     </actions>

@@ -40,9 +40,7 @@ public interface mSPnDE {
     
     double[] probsForInstance(Instance inst);
     
-    void moreChildren(String child);
-    
-    void moreChildren(ArrayList<String> children);
+    void moreChildren(int child);
     
     int getNChildren();
     

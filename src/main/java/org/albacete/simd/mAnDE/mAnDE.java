@@ -82,17 +82,7 @@ public class mAnDE extends AbstractClassifier implements
     /**
      * HashMap containing the mSPnDEs.
      */
-    private ConcurrentHashMap<String, mSPnDE> mSPnDEs;
-
-    /**
-     * HashMap to convert from variable name to index.
-     */
-    public static HashMap<String, Integer> nToI;
-
-    /**
-     * HashMap to convert from variable index to name.
-     */
-    public static HashMap<Integer, String> iToN;
+    private ConcurrentHashMap<Integer, mSPnDE> mSPnDEs;
 
     /**
      * Number of values per variable.
@@ -186,10 +176,10 @@ public class mAnDE extends AbstractClassifier implements
         instances.delete();
 
         // We initialize the index dictionaries
-        initializeNameToIndex();
+        //initializeNameToIndex();
 
         // Create the mSPnDE's
-        try {
+        //try {
             // We check that with this bagSize, we will have more than 
             // minimumInstances instances (default 3)
             if (bagSize > 0) {
@@ -199,7 +189,7 @@ public class mAnDE extends AbstractClassifier implements
             }
                         
             build_mSPnDEs();
-        } catch (Exception ex) {}
+        //} catch (Exception ex) {}
         
         // If we have not created mSPnDE's
         if (mSPnDEs.isEmpty()) {
@@ -210,7 +200,7 @@ public class mAnDE extends AbstractClassifier implements
             setBaseClass("J48");
             setAddNB(0.4);
             
-            String[] posClassifiers = {"Bagging", "RF", "Boosting"};
+            String[] posClassifiers = {"Bagging", "RF", "AdaBoost"};
 
             // We try with Bagging, RF and Boosting
             for (int i = 0; i < posClassifiers.length; i++) {
@@ -222,9 +212,9 @@ public class mAnDE extends AbstractClassifier implements
                 done.add(posClassifiers[i]);
 
                 // Try to build the mSPnDEs with the new configuration
-                try {
+                //try {
                     build_mSPnDEs();
-                } catch (Exception ex) {}
+                //} catch (Exception ex) {}
 
                 // If we have created mSPnDEs, we end up with
                 if (!mSPnDEs.isEmpty()) {
@@ -324,7 +314,7 @@ public class mAnDE extends AbstractClassifier implements
             Utils.normalize(res);
         } catch (IllegalArgumentException ex) {
             for (int i = 0; i < res.length; i++) {
-                res[i] = 1.0 / (varNumValues.length - 1);
+                res[i] = 1.0 / classNumValues;
             }
         }
         
@@ -364,16 +354,13 @@ public class mAnDE extends AbstractClassifier implements
                 }
                 break;
         }
-        
+
         if (!ensemble.equals("none")) {
-            String[] options = new String[2];
-            options[0] = "-num-slots";
-            options[1] = "0";
 
             switch (getEnsemble()) {
                 case "Bagging":
                     Bagging2 bagging = new Bagging2();
-                    bagging.setOptions(options);
+                    bagging.setNumExecutionSlots(0);
                     bagging.setClassifier(base);
                     bagging.setNumIterations(nTrees);
                     bagging.setBagSizePercentDouble(bagSize);
@@ -389,11 +376,12 @@ public class mAnDE extends AbstractClassifier implements
                     break;
                 case "RF":
                     RandomForest2 rf = new RandomForest2();
-                    rf.setOptions(options);
+                    rf.setNumExecutionSlots(0);
                     rf.setNumIterations(nTrees);
                     rf.setBagSizePercentDouble(bagSize);
                     rf.buildClassifier(data);
-                    trees = Arrays.asList(rf.getClassifiers());
+                    
+                    rf.toSP1DE(mSPnDEs);
                     break;
                 case "LogitBoost":
                     LogitBoost2 lb = new LogitBoost2();
@@ -406,11 +394,11 @@ public class mAnDE extends AbstractClassifier implements
                     throw new Exception("Ensemble type not supported");
             }
             
-            trees.stream().forEach((tree) -> {
+            /*trees.stream().forEach((tree) -> {
                 graphToSPnDE(treeParser(tree));
-            });
+            });*/
             
-            if (getN() == 3) {
+            /*if (getN() == 3) {
                 HashMap<String, HashSet<String>> childrenMap = new HashMap<>();
                 trees.stream().forEach((tree) -> {
                     toSP2DE_children(treeParser(tree), childrenMap);
@@ -419,26 +407,25 @@ public class mAnDE extends AbstractClassifier implements
                 mSPnDEs.values().forEach((sp2de) -> {
                     HashSet<String> children = childrenMap.get(((mSP2DE)sp2de).xi1_s);
                     sp2de.moreChildren(new ArrayList<>(children));
-                    int ch = children.size();
 
                     children = childrenMap.get(((mSP2DE)sp2de).xi2_s);
                     sp2de.moreChildren(new ArrayList<>(children));
                 });
-            }
+            }*/
             
         } else {
             base.buildClassifier(data);
-            graphToSPnDE(treeParser(base));
+            //graphToSPnDE(treeParser(base));
         }
     }
-
+    
     /**
      * Reads the classifier passed by parameter and returns a
      * HashMap<String,Node> with the classifier data.
      *
      * @param classifier Classifier to be parsed
      */
-    private HashMap<String, Node> treeParser(Classifier clasificador) {
+    /*private HashMap<String, Node> treeParser(Classifier clasificador) {
         String[] lines = new String[0];
         try {
             lines = ((Drawable) clasificador).graph().split("\r\n|\r|\n");
@@ -534,12 +521,12 @@ public class mAnDE extends AbstractClassifier implements
             }
         }
         return nodes;
-    }
+    }*/
 
     /**
      * Converts a HashMap<String,Node> to a representation of mAnDE.
      */
-    private void graphToSPnDE(HashMap<String, Node> nodes) {
+    /*private void graphToSPnDE(HashMap<String, Node> nodes) {
         switch (getN()) {
             case 1:
                 nodes.values().forEach((node) -> {
@@ -562,7 +549,7 @@ public class mAnDE extends AbstractClassifier implements
             default:
                 break;
         }
-    }
+    }*/
 
     /**
      * Create an mSP1DE with the variable 'parent' if it doesn't already exist
@@ -571,7 +558,7 @@ public class mAnDE extends AbstractClassifier implements
      * @param parent Name of the parent in the mSP1DE.
      * @param child Name of the child in the mSP1DE.
      */
-    private void toSP1DE(String parent, String child) {
+    /*private void toSP1DE(String parent, String child) {
         if (!parent.equals(child)) {
             if (!mSPnDEs.containsKey(parent)) {
                 mSPnDEs.put(parent, new mSP1DE(parent));
@@ -587,7 +574,7 @@ public class mAnDE extends AbstractClassifier implements
                 }
             }
         }
-    }
+    }*/
 
     /**
      * Create an mSP2DE with the variables 'parent' and 'child' (linked in the
@@ -600,7 +587,7 @@ public class mAnDE extends AbstractClassifier implements
      * @param brothers Name of the other children of the father in the mSP2DE.
      * @param grandchildren Name of the children of the child in the mSP2DE.
      */
-    private void toSP2DE(String parent, String child, String grandparent,
+    /*private void toSP2DE(String parent, String child, String grandparent,
             ArrayList<String> brothers, ArrayList<String> grandchildren) {
         int compare = parent.compareTo(child);
         if (!(compare == 0)) {
@@ -621,7 +608,7 @@ public class mAnDE extends AbstractClassifier implements
             } catch (NullPointerException ex) {
             }
         }
-    }
+    }*/
     
     /**
      * Add the children to the mSP2DEs
@@ -629,7 +616,7 @@ public class mAnDE extends AbstractClassifier implements
      * @param parent Name of the parent in the mSP2DE.
      * @param child Name of the child in the mSP2DE.
      */
-    private void toSP2DE_children(HashMap<String, Node> nodes, HashMap<String, HashSet<String>> childrenMap) {
+    /*private void toSP2DE_children(HashMap<String, Node> nodes, HashMap<String, HashSet<String>> childrenMap) {
         nodes.values().forEach((node) -> {
             node.getChildren().values().forEach((child) -> {
                 if (!node.getName().equals("") && !child.getName().equals("")) {
@@ -645,7 +632,7 @@ public class mAnDE extends AbstractClassifier implements
                  }
             });
         }); 
-    }
+    }*/
 
     /**
      * Executes in parallel the 'buildTables()' functions of each mSPnDE, and
@@ -663,14 +650,14 @@ public class mAnDE extends AbstractClassifier implements
     /**
      * Initialise HashMaps to convert indexes to names.
      */
-    private void initializeNameToIndex() {
+    /*private void initializeNameToIndex() {
         nToI = new HashMap<>();
         iToN = new HashMap<>();
         for (int i = 0; i < data.numAttributes(); i++) {
             nToI.put(data.attribute(i).name(), i);
             iToN.put(i, data.attribute(i).name());
         }
-    }
+    }*/
 
     /**
      * Returns the number of nSPnDEs and Variables per nSPnDE.

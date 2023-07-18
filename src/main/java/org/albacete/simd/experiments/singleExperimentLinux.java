@@ -116,20 +116,18 @@ public class singleExperimentLinux {
             System.out.println(e);
         }*/
         String[] params = new String[12];
-        params[0] = "MLL.arff";
-        params[1] = "Bagging";
+        params[0] = "covertype.arff";
+        params[1] = "mAnDE";
         params[2] = "2";
-        params[3] = "0";
+        params[3] = "3";
         params[4] = "FeI2";
-        params[5] = "50";
+        params[5] = "100";
         params[6] = "none";
-        params[7] = "J48";
-        params[8] = "2";
-        params[9] = "Bagging";
+        params[7] = "RandomTree";
+        params[8] = "1";
+        params[9] = "RF";
         params[10] = "100";
         params[11] = "0";
-        
-        
 
         // Getting params from line: bbdd, algorithm, seed, folds, discretized, 
         // nTrees, featureSelection, baseClas, (n, ensemble, boosting, RF, bagSize)
@@ -529,7 +527,7 @@ public class singleExperimentLinux {
         
         //ConverterUtils.DataSource loader = new ConverterUtils.DataSource("res/bbdd/" + bbdd);
 
-        ConverterUtils.DataSource loader = new ConverterUtils.DataSource("../MICROARRAYS/" + bbdd);
+        ConverterUtils.DataSource loader = new ConverterUtils.DataSource("../MICROARRAYS/temp/" + bbdd);
 
         Instances data = loader.getDataSet();
         data.setClassIndex(data.numAttributes()-1);

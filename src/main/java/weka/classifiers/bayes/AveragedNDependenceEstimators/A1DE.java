@@ -206,7 +206,7 @@ OptionHandler, WeightedInstancesHandler, TechnicalInformationHandler {
 	private int m_ClassIndex;
 
 	/** The dataset */
-	private Instances m_Instances;
+	public Instances m_Instances;
 
 	/**
 	 * The total number of values (including an extra for each attribute's 
@@ -361,7 +361,7 @@ OptionHandler, WeightedInstancesHandler, TechnicalInformationHandler {
 			m_Disc.setInputFormat(m_Instances);
 			m_Instances = weka.filters.Filter.useFilter(m_Instances, m_Disc);
 		}
-
+ 
 		// reset variable for this fold
 		m_SumInstances = 0;
 		m_ClassIndex = instances.classIndex();
@@ -962,7 +962,7 @@ OptionHandler, WeightedInstancesHandler, TechnicalInformationHandler {
 		/* add all the probabilities for each class */
 		for (int classVal = 0; classVal < m_NumClasses; classVal++) {
 			for (int i = 0; i < m_NumAttributes; i++) {
-				probs[classVal] += spodeProbs[i][classVal];
+				probs[classVal] += spodeProbs[i][classVal] + Double.MIN_VALUE;
 			}			
 		}
 
